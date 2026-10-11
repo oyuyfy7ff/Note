@@ -1,4 +1,4 @@
-const APP_VERSION = "1.1.0 (2)";
+const APP_VERSION = "1.2.0 (3)";
 const KEY = "notemind.notes";
 const $ = function (id) { return document.getElementById(id); };
 
@@ -39,6 +39,15 @@ function newId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 }
 
+function isDraw(n) {
+  return n.type === "draw";
+}
+
+function isEmpty(n) {
+  if (n.title.trim()) { return false; }
+  return isDraw(n) ? !(n.strokes && n.strokes.length) : !n.body.trim();
+}
+
 function show(name) {
   $("view-list").hidden = name !== "list";
   $("view-edit").hidden = name !== "edit";
@@ -60,8 +69,10 @@ function renderList() {
     t.textContent = n.title || "ไม่มีหัวข้อ";
     const m = document.createElement("div");
     m.className = "muted small";
-    const preview = (n.body || "").replace(/\s+/g, " ").slice(0, 60);
-    m.textContent = fmt(n.updated) + (preview ? "  " + preview : "");
+    const what = isDraw(n)
+      ? "เขียนมือ " + (n.strokes ? n.strokes.length : 0) + " เส้น"
+      : (n.body || "").replace(/\s+/g, " ").slice(0, 60);
+    m.textContent = fmt(n.updated) + (what ? "  " + what : "");
     grow.appendChild(t);
     grow.appendChild(m);
     li.appendChild(grow);
@@ -76,7 +87,7 @@ function flush() {
   if (timer) { clearTimeout(timer); timer = null; }
   if (current) {
     current.title = $("title").value;
-    current.body = $("body").value;
+    if (!isDraw(current)) { current.body = $("body").value; }
     if (persist()) { $("saved").textContent = "บันทึกแล้ว"; }
   }
 }
@@ -84,11 +95,19 @@ function flush() {
 function leaveEdit() {
   if (!current) { return; }
   flush();
-  if (!current.title.trim() && !current.body.trim()) {
+  if (isEmpty(current)) {
     notes = notes.filter(function (n) { return n.id !== current.id; });
     persist();
   }
+  Draw.close();
   current = null;
+}
+
+function schedule() {
+  $("saved").textContent = "กำลังบันทึก";
+  if (current) { current.updated = Date.now(); }
+  if (timer) { clearTimeout(timer); }
+  timer = setTimeout(flush, 400);
 }
 
 function route() {
@@ -99,9 +118,14 @@ function route() {
       if (current && current.id !== n.id) { leaveEdit(); }
       current = n;
       $("title").value = n.title;
-      $("body").value = n.body;
       $("saved").textContent = "";
+      const d = isDraw(n);
+      $("text-fields").hidden = d;
+      $("draw-area").hidden = !d;
+      $("tools").hidden = !d;
+      if (!d) { $("body").value = n.body; }
       show("edit");
+      if (d) { Draw.open(n, schedule); }
       return;
     }
   }
@@ -115,19 +139,16 @@ function openNote(id) {
   location.hash = "#/note/" + id;
 }
 
-function schedule() {
-  $("saved").textContent = "กำลังบันทึก";
-  if (current) { current.updated = Date.now(); }
-  if (timer) { clearTimeout(timer); }
-  timer = setTimeout(flush, 400);
-}
-
-$("new").addEventListener("click", function () {
-  const n = { id: newId(), type: "text", title: "", body: "", updated: Date.now() };
+function create(type) {
+  const n = { id: newId(), type: type, title: "", updated: Date.now() };
+  if (type === "draw") { n.strokes = []; } else { n.body = ""; }
   notes.push(n);
   openNote(n.id);
-  setTimeout(function () { $("body").focus(); }, 50);
-});
+  if (type === "text") { setTimeout(function () { $("body").focus(); }, 50); }
+}
+
+$("new").addEventListener("click", function () { create("text"); });
+$("new-draw").addEventListener("click", function () { create("draw"); });
 
 $("back").addEventListener("click", function () {
   if (pushed) { pushed = false; history.back(); } else { location.hash = "#/"; }
@@ -144,6 +165,7 @@ $("confirm-yes").addEventListener("click", function () {
     const id = current.id;
     notes = notes.filter(function (n) { return n.id !== id; });
     persist();
+    Draw.close();
     current = null;
   }
   location.hash = "#/";

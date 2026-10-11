@@ -10,7 +10,10 @@
   <section id="view-list" hidden>
     <header class="appbar"><h1>NoteMind</h1></header>
     <main class="screen">
-      <button type="button" class="block" id="new">โน้ตใหม่</button>
+      <div class="grid2">
+        <button type="button" id="new">โน้ตพิมพ์</button>
+        <button type="button" class="soft" id="new-draw">โน้ตเขียนมือ</button>
+      </div>
       <ul class="list" id="list"></ul>
       <p class="empty" id="empty">ยังไม่มีโน้ต</p>
       <p class="muted small" id="ver"></p>
@@ -24,14 +27,31 @@
       <h1>โน้ต</h1>
       <button type="button" class="danger" id="del">ลบ</button>
     </header>
+    <div class="toolbar tools" id="tools" hidden>
+      <button type="button" class="soft" data-tool="pen" aria-pressed="true">ปากกา</button>
+      <button type="button" class="soft" data-tool="eraser" aria-pressed="false">ยางลบ</button>
+      <button type="button" class="soft" data-tool="scroll" aria-pressed="false">เลื่อนหน้า</button>
+      <button type="button" class="soft" id="undo">ย้อนกลับ</button>
+      <button type="button" class="soft" id="redo">ทำซ้ำ</button>
+      <button type="button" class="soft swatch" data-color="#111111" aria-label="สีดำ" aria-pressed="true"><span style="background:#111111"></span></button>
+      <button type="button" class="soft swatch" data-color="#1d4ed8" aria-label="สีน้ำเงิน" aria-pressed="false"><span style="background:#1d4ed8"></span></button>
+      <button type="button" class="soft swatch" data-color="#c62828" aria-label="สีแดง" aria-pressed="false"><span style="background:#c62828"></span></button>
+      <button type="button" class="soft swatch" data-color="#2e7d32" aria-label="สีเขียว" aria-pressed="false"><span style="background:#2e7d32"></span></button>
+      <button type="button" class="soft" data-size="3" aria-pressed="false">บาง</button>
+      <button type="button" class="soft" data-size="6" aria-pressed="true">กลาง</button>
+      <button type="button" class="soft" data-size="12" aria-pressed="false">หนา</button>
+    </div>
     <main class="screen">
       <div class="field">
         <label for="title">หัวข้อ</label>
         <input id="title" type="text" autocomplete="off">
       </div>
-      <div class="field">
+      <div class="field" id="text-fields">
         <label for="body">เนื้อหา</label>
         <textarea id="body"></textarea>
+      </div>
+      <div id="draw-area" hidden>
+        <canvas id="pad" width="800" height="1200"></canvas>
       </div>
       <p class="muted small" id="saved"></p>
     </main>
@@ -54,6 +74,7 @@
       document.getElementById("err").textContent += "Promise: " + e.reason + "\n";
     });
   </script>
+  <script src="draw.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

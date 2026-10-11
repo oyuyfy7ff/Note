@@ -14,9 +14,9 @@ Features and "Done when":
 6. Practice questions: AI makes questions from a note; user can import images and files into a note or the chat.
 
 ## Status
-Current phase: 3, feature 1 (typed notes) built, waiting for user test
+Current phase: 3, feature 2 (handwritten notes) built, waiting for user test
 Done: scope approved
-Next: user tests feature 1, then feature 2 (handwritten notes)
+Next: user tests feature 2, then feature 3 (settings)
 
 ## Handoff
 Read SKILL.md first. Version line is shown on the main screen.
@@ -28,4 +28,4 @@ Read SKILL.md first. Version line is shown on the main screen.
 None yet
 
 ## Versions
-versionName 1.1.0, versionCode 2 (android/app/build.gradle)
+versionName 1.2.0, versionCode 3 (android/app/build.gradle)

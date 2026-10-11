@@ -139,3 +139,18 @@ input[type="checkbox"]:checked::after { content: ""; position: absolute; left: 7
 .pic .dot { display: flex; align-items: center; justify-content: center; }
 .pic .del .dot { width: 32px; height: 32px; border-radius: 50%; background: var(--surface); border: 1px solid var(--line); }
 .pic .hnd .dot { width: 24px; height: 24px; border-radius: 50%; background: var(--main); border: 3px solid var(--surface); }
+
+/* AI chat page (1.7.0) */
+.aibar { position: sticky; bottom: calc(var(--nav-h) + env(safe-area-inset-bottom)); z-index: 9; background: var(--bg); border-top: 0.5px solid var(--line); }
+.aibar .toolbar { border-bottom: 0; padding-bottom: 0; }
+.aibar .composer { position: static; align-items: flex-end; border-top: 0; padding-bottom: var(--s2); }
+.composer textarea { flex: 1; min-height: 48px; max-height: 120px; resize: none; border-radius: 24px; padding: 11px var(--s4); line-height: 1.4; }
+.icon-send { flex: none; width: 48px; padding: 0; border-radius: 50%; background: var(--yellow); color: var(--on-yellow); }
+.bubble { max-width: 88%; white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; -webkit-user-select: text; }
+.bubble.me { background: var(--yellow); color: var(--on-yellow); }
+.bubble.thinking { color: var(--muted); }
+.bubble code { padding: 0 4px; background: var(--surface); border-radius: 4px; font-family: ui-monospace, monospace; font-size: 0.92em; }
+#pick-list { max-height: 50dvh; overflow-y: auto; }
+@media (orientation: landscape) and (max-height: 520px) {
+  .aibar { bottom: calc(44px + env(safe-area-inset-bottom)); }
+}

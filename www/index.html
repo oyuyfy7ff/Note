@@ -28,14 +28,29 @@
   </section>
 
   <section id="view-ai" hidden>
-    <header class="appbar large"><h1>AI</h1></header>
+    <header class="appbar large">
+      <h1>AI</h1>
+      <button type="button" class="txt" id="chat-clear">ล้าง</button>
+    </header>
     <main class="screen">
-      <div class="card">
-        <h3>ผู้ช่วย AI</h3>
-        <p class="muted">ส่วนแชตจะเปิดใช้ในขั้นถัดไป</p>
-      </div>
       <p class="muted small" id="ai-status"></p>
+      <div class="chat" id="chat"></div>
+      <p class="empty" id="chat-empty">ถามอะไรก็ได้ หรือกดสรุปและวิเคราะห์โน้ตจากปุ่มด้านล่าง</p>
+      <p class="error" id="chat-err" hidden></p>
     </main>
+    <div class="aibar">
+      <div class="toolbar">
+        <button type="button" class="soft" id="act-sum">สรุปโน้ต</button>
+        <button type="button" class="soft" id="act-ana">วิเคราะห์โน้ต</button>
+        <button type="button" class="soft" id="act-find">ค้นหาในโน้ต</button>
+      </div>
+      <div class="composer">
+        <textarea id="chat-input" rows="1" placeholder="พิมพ์ข้อความ" aria-label="ข้อความ"></textarea>
+        <button type="button" class="icon-send" id="chat-send" aria-label="ส่ง">
+          <svg class="i" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+        </button>
+      </div>
+    </div>
   </section>
 
   <section id="view-settings" hidden>
@@ -145,6 +160,14 @@
     </div>
   </div>
 
+  <div class="scrim" id="pick" hidden>
+    <div class="sheet">
+      <h2 id="pick-title"></h2>
+      <ul class="group" id="pick-list"></ul>
+      <button type="button" class="soft block" id="pick-no">ยกเลิก</button>
+    </div>
+  </div>
+
   <script>
     window.addEventListener("error", function (e) {
       document.getElementById("err").textContent += e.message + " (" + e.filename + ":" + e.lineno + ")\n";
@@ -157,6 +180,7 @@
   <script src="core.js"></script>
   <script src="ink.js"></script>
   <script src="editor.js"></script>
+  <script src="chat.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

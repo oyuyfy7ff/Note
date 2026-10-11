@@ -9,6 +9,7 @@ Features and "Done when":
 1. Typed note: create, type, save; close and reopen, the note is still there.
 2. Handwritten note: draw on a page, choose color and thickness, erase, undo, save.
 3. AI chat page (OpenRouter): type a question and get an answer; buttons for summarize, analyze, search my notes.
+   Done when: with a key and model set, type a question and tap send, an answer appears; tap Summarize note, pick a note, a summary appears; type a word, tap Search in notes, the answer uses that note.
 4. Cut menu: drag a box over part of a note and send it to the chat, or copy text into the chat (handwriting goes as an image, needs a vision model).
 5. Settings: OpenRouter API key and model name typed by the user, stored on the device only.
 6. Practice questions: AI makes questions from a note; user can import images and files into a note or the chat.
@@ -16,32 +17,31 @@ Features and "Done when":
    Done when: add 2 images, tap one, drag it to a new place, drag the corner dot to make it smaller, close and reopen the note, the place and size are kept.
 
 ## Status
-Current phase: 3, image move and resize (1.6.0) built, waiting for user test
-Done: scope approved, features 1 and 2 built, images in notes (1.5.0)
-Next: user tests 1.6.0 (select, move, resize, delete, reopen), then AI chat page (feature 3, version 1.7.0)
+Current phase: 3, AI chat page (1.7.0) built, waiting for user test. Image move and resize (1.6.0) pushed, user test not confirmed yet.
+Done: scope approved, features 1, 2 and 7 built, feature 3 built
+Next: user tests 1.7.0 (chat, summarize, analyze, search, error message with a wrong key, clear), then feature 4 (cut menu)
 
 ## Handoff
 Last worked by: Claude (Sonnet 5.5), 2026-10-11
-Changed: www/editor.js (select, move, resize, delete for images), www/core.js (note.layout), www/ios.css (image controls), versions
-Not tested: on the real phone (touch gestures, landscape)
-Tested in desktop Chromium with a mouse: resize, move, reopen, delete.
+Changed: www/chat.js (new), www/index.html (AI view, note picker, script tag), www/app.js (renderAi calls Chat.show), www/ios.css (chat styles), versions
+Not tested: on the real phone, and against the real OpenRouter (tested with a mocked reply in desktop Chromium)
 Version line is shown on the settings screen.
 
 ## Planned file tree
-.github/workflows/build.yml, package.json, capacitor.config.json, www/index.html, www/style.css, www/ios.css, www/core.js, www/images.js, www/ink.js, www/editor.js, www/app.js
+.github/workflows/build.yml, package.json, capacitor.config.json, www/index.html, www/style.css, www/ios.css, www/core.js, www/images.js, www/ink.js, www/editor.js, www/chat.js, www/app.js
 
 ## Known bugs
 None yet
 
 ## Versions
-versionName 1.6.0, versionCode 7 (android/app/build.gradle)
+versionName 1.7.0, versionCode 8 (android/app/build.gradle)
 
-## Screens (updated for 1.3.0)
+## Screens (updated for 1.7.0)
 1. Notes manager: search, select and delete many, new note button, bottom navigation.
 2. Note page: whole screen, typing and handwriting on the same page (ink layer over the text), tool dock in handwriting mode.
-3. AI page: placeholder until the chat is built.
+3. AI page: chat bubbles, buttons Summarize note, Analyze note, Search in notes, message box with send button, Clear in the top right.
 4. Settings: OpenRouter API key and model name, stored on the device only.
-Files: www/core.js, www/ink.js, www/editor.js, www/app.js
+Files: www/core.js, www/ink.js, www/editor.js, www/chat.js, www/app.js
 
 ## Changes in 1.4.0
 - Look: iOS Notes style (grouped lists, yellow accent, large titles, tab bar with line icons). New file www/ios.css loads after style.css.
@@ -51,4 +51,10 @@ Files: www/core.js, www/ink.js, www/editor.js, www/app.js
 - Images in notes: image button in the note top bar (several at once, shrunk to 1600 px), shown under the title, tap to delete, ink draws over them. New file www/images.js keeps the pictures in IndexedDB (ids are saved in note.images). Deleting a note deletes its pictures.
 
 ## Changes in 1.6.0
-- Images can be moved and resized. Tap an image to select it: a bin button (top left) deletes it, a dot (bottom right) resizes it with the aspect ratio kept, dragging the image moves it. Tap outside to unselect. Position and size are saved in note.layout[id] = { x, y, w, ar } (x and w are fractions of the paper width, y is pixels, ar is height divided by width). Old images get a default place (full width, stacked) the first time the note is opened. Touch is turned off for gestures while handwriting mode is on.
+- Images can be moved and resized. Tap an image to select it: a bin button (top left) deletes it, a dot (bottom right) resizes it with the aspect ratio kept, dragging the image moves it. Tap outside to unselect. Position and size are saved in note.layout[id] = { x, y, w, ar } (x and w are fractions of the paper width, y is pixels, ar is height divided by width). Old images get a default place (full width, stacked) the first time the note is opened.
+
+## Changes in 1.7.0
+- AI chat page. New file www/chat.js. Calls https://openrouter.ai/api/v1/chat/completions with the key and model from Settings (no streaming, 90 second limit). The last 16 messages are sent with a short Thai system prompt. Chat history is kept in localStorage key notemind.chat (last 40 messages).
+- Summarize note and Analyze note: a picker sheet lists the notes, the chosen note text (up to 6000 characters) is sent. A note with no text (only images or handwriting) shows a message instead.
+- Search in notes: the text in the message box is the question. Up to 5 notes that contain the words (or the 5 newest if none match) are sent, 1500 characters each.
+- Replies show bold, bullets and code in a simple safe way. On an error the message is shown in red and the typed text goes back into the box.

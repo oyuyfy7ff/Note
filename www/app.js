@@ -1,4 +1,4 @@
-const APP_VERSION = "1.6.0 (7)";
+const APP_VERSION = "1.7.0 (8)";
 
 let editing = false;
 let pushed = false;
@@ -126,9 +126,7 @@ function setSelecting(on) {
 }
 
 function renderAi() {
-  const s = Store.settings();
-  $("ai-status").textContent = (s.apiKey ? "API key: ตั้งค่าแล้ว" : "API key: ยังไม่ได้ตั้งค่า (ไปที่หน้าตั้งค่า)") +
-    "   โมเดล: " + (s.model || "ยังไม่ได้ตั้งค่า");
+  Chat.show();
 }
 
 function renderSettings() {

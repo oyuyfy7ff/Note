@@ -1,16 +1,42 @@
-const APP_VERSION = "1.3.0 (4)";
+const APP_VERSION = "1.4.0 (5)";
 
 let editing = false;
 let pushed = false;
 let selecting = false;
 let selected = new Set();
 
-function fmt(ms) {
+const DAY = 86400000;
+
+function startOfToday() {
+  const t = new Date();
+  return new Date(t.getFullYear(), t.getMonth(), t.getDate()).getTime();
+}
+
+function groupName(ms, start) {
+  if (ms >= start) { return "วันนี้"; }
+  if (ms >= start - DAY) { return "เมื่อวาน"; }
+  if (ms >= start - 7 * DAY) { return "7 วันก่อนหน้า"; }
+  if (ms >= start - 30 * DAY) { return "30 วันก่อนหน้า"; }
+  return "เก่ากว่า";
+}
+
+function rowTime(ms, start) {
   try {
-    return new Date(ms).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" });
+    if (ms >= start) {
+      return new Date(ms).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
+    }
+    return new Date(ms).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" });
   } catch (e) {
-    return new Date(ms).toISOString().slice(0, 16).replace("T", " ");
+    return new Date(ms).toISOString().slice(0, 10);
   }
+}
+
+function titleAndPreview(n) {
+  const title = (n.title || "").trim();
+  const lines = (n.body || "").split("\n").map(function (x) { return x.trim(); }).filter(Boolean);
+  if (title) { return [title, lines.join(" ")]; }
+  if (lines.length) { return [lines[0], lines.slice(1).join(" ")]; }
+  return ["โน้ตใหม่", ""];
 }
 
 function show(name) {
@@ -35,9 +61,23 @@ function renderList() {
   const rows = all.filter(function (n) {
     return !q || (n.title + " " + n.body).toLowerCase().indexOf(q) >= 0;
   }).sort(function (a, b) { return b.updated - a.updated; });
+  const start = startOfToday();
+  let lastGroup = "";
+  let ul = null;
   rows.forEach(function (n) {
+    const g = groupName(n.updated, start);
+    if (g !== lastGroup) {
+      lastGroup = g;
+      const h = document.createElement("h2");
+      h.className = "sec";
+      h.textContent = g;
+      ul = document.createElement("ul");
+      ul.className = "group";
+      box.appendChild(h);
+      box.appendChild(ul);
+    }
     const li = document.createElement("li");
-    li.className = "row";
+    li.className = "nrow";
     li.setAttribute("role", "button");
     li.tabIndex = 0;
     if (selecting) {
@@ -47,16 +87,16 @@ function renderList() {
       cb.tabIndex = -1;
       li.appendChild(cb);
     }
+    const tp = titleAndPreview(n);
     const grow = document.createElement("div");
     grow.className = "grow";
     const t = document.createElement("div");
-    t.style.fontWeight = "600";
-    t.textContent = n.title || "ไม่มีหัวข้อ";
+    t.className = "t";
+    t.textContent = tp[0];
     const m = document.createElement("div");
-    m.className = "muted small";
-    const text = (n.body || "").replace(/\s+/g, " ").slice(0, 50);
-    const ink = n.strokes.length ? "เขียนมือ " + n.strokes.length + " เส้น" : "";
-    m.textContent = [fmt(n.updated), text, ink].filter(Boolean).join("  ");
+    m.className = "m";
+    const extra = tp[1].slice(0, 60) || (n.strokes.length ? "เขียนมือ" : "ไม่มีข้อความเพิ่มเติม");
+    m.textContent = rowTime(n.updated, start) + "  " + extra;
     grow.appendChild(t);
     grow.appendChild(m);
     li.appendChild(grow);
@@ -68,10 +108,11 @@ function renderList() {
         openNote(n.id);
       }
     });
-    box.appendChild(li);
+    ul.appendChild(li);
   });
-  $("empty").textContent = q ? "ไม่พบโน้ต" : "ยังไม่มีโน้ต กดปุ่ม + เพื่อสร้าง";
+  $("empty").textContent = q ? "ไม่พบโน้ต" : "ยังไม่มีโน้ต แตะปุ่มด้านล่างเพื่อสร้าง";
   $("empty").hidden = rows.length > 0;
+  $("count").textContent = rows.length ? rows.length + " โน้ต" : "";
   $("sel-delete").textContent = "ลบที่เลือก (" + selected.size + ")";
   $("sel-delete").disabled = selected.size === 0;
   $("select").textContent = selecting ? "เสร็จ" : "เลือก";

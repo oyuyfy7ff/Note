@@ -1,0 +1,121 @@
+/* iOS Notes look. Loaded after style.css, so it overrides it. */
+
+/* colors: grouped gray background, white groups, yellow accent */
+:root {
+  --font: -apple-system, "SF Pro Text", system-ui, "Noto Sans Thai", sans-serif;
+  --radius: 12px;
+  --radius-sm: 10px;
+  --nav-h: 56px;
+  --bg: #f2f2f7;
+  --surface: #ffffff;
+  --surface2: #e9e9ee;
+  --text: #111111;
+  --muted: #6c6c70;
+  --line: #d8d8dc;
+  --main: #c98a00;
+  --yellow: #ffcc00;
+  --on-yellow: #1b1400;
+  --danger: #d70015;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #000000;
+    --surface: #1c1c1e;
+    --surface2: #2c2c2e;
+    --text: #ffffff;
+    --muted: #98989f;
+    --line: #38383a;
+    --main: #ffd60a;
+    --yellow: #ffd60a;
+    --danger: #ff453a;
+  }
+}
+
+svg.i { width: 24px; height: 24px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* text buttons and icon buttons (top bars) */
+.txt { min-height: 44px; min-width: 44px; padding: 0 var(--s2); gap: var(--s1); background: transparent; color: var(--main); font-size: 17px; font-weight: 400; border-radius: var(--radius-sm); }
+.txt:active { filter: none; opacity: 0.5; }
+.danger-txt { color: var(--danger); }
+.txt:disabled { opacity: 0.35; }
+.icon-btn { width: 44px; min-width: 44px; color: var(--main); }
+.icon-btn:active { filter: none; opacity: 0.5; }
+#mode[aria-pressed="true"] .ic-pen, #mode[aria-pressed="false"] .ic-kbd { display: none; }
+#mode[aria-pressed="true"] { color: var(--text); }
+
+/* large title screens */
+.appbar.large { position: static; align-items: flex-end; min-height: 0; padding: calc(env(safe-area-inset-top) + var(--s3)) var(--s4) var(--s2); background: transparent; border: 0; }
+.appbar.large h1 { font-size: 34px; font-weight: 700; line-height: 1.2; }
+.screen { gap: var(--s3); padding-top: var(--s2); }
+
+/* search pill */
+.search { position: relative; }
+.search svg { position: absolute; left: 10px; top: 50%; width: 18px; height: 18px; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.search input { min-height: 40px; padding: 0 var(--s3) 0 36px; background: #7676801f; border: 0; border-radius: var(--radius-sm); -webkit-appearance: none; appearance: none; }
+
+/* grouped list */
+.sec { margin: var(--s3) var(--s1) var(--s2); font-size: 20px; font-weight: 700; }
+.group { margin: 0; padding: 0; list-style: none; background: var(--surface); border-radius: var(--radius); overflow: hidden; }
+.nrow { position: relative; display: flex; align-items: center; gap: var(--s3); min-height: 64px; padding: var(--s3) var(--s4); }
+.nrow + .nrow::before { content: ""; position: absolute; top: 0; left: var(--s4); right: 0; border-top: 0.5px solid var(--line); }
+.nrow:active { background: var(--surface2); }
+.nrow .grow { flex: 1; min-width: 0; }
+.nrow .t, .nrow .m { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.nrow .t { font-size: 17px; font-weight: 600; }
+.nrow .m { font-size: 15px; color: var(--muted); }
+.count { padding: var(--s3) 0 var(--s6); text-align: center; }
+
+/* round checkbox (select mode) */
+input[type="checkbox"] { -webkit-appearance: none; appearance: none; position: relative; flex: none; width: 24px; min-height: 24px; height: 24px; padding: 0; background: transparent; border: 1.5px solid var(--muted); border-radius: 50%; }
+input[type="checkbox"]:checked { background: var(--yellow); border-color: var(--yellow); }
+input[type="checkbox"]:checked::after { content: ""; position: absolute; left: 7px; top: 3px; width: 6px; height: 11px; border: solid var(--on-yellow); border-width: 0 2px 2px 0; transform: rotate(45deg); }
+
+/* settings group */
+.group .field { gap: 2px; padding: var(--s3) var(--s4); }
+.group .field + .field { border-top: 0.5px solid var(--line); }
+.group .field label { font-weight: 400; color: var(--muted); }
+.group .field input { min-height: 32px; padding: 2px 0; background: transparent; border: 0; border-radius: 0; }
+.group .field input:focus { outline: none; }
+
+/* compose button and tab bar */
+.fab { background: var(--yellow); color: var(--on-yellow); box-shadow: 0 4px 14px #0000003d; }
+.nav { border-top: 0.5px solid var(--line); }
+.nav button { gap: 2px; min-height: var(--nav-h); padding: var(--s1) 0; font-size: 11px; }
+.nav button[aria-current="page"] { color: var(--main); }
+.selbar { justify-content: space-between; border-top: 0.5px solid var(--line); }
+.selbar button { flex: none; }
+
+/* note page: fixed full screen, the paper scrolls inside */
+#view-edit:not([hidden]) { position: fixed; inset: 0; z-index: 5; display: flex; flex-direction: column; padding: 0 env(safe-area-inset-right) 0 env(safe-area-inset-left); background: var(--surface); }
+.appbar.edit { position: static; flex: none; gap: 0; min-height: calc(48px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) var(--s2) 0; background: var(--surface); border: 0; }
+.appbar.edit .spacer { flex: 1; }
+.page, .page.ink { display: block; flex: 1; min-height: 0; padding: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.paper { position: relative; max-width: 900px; margin: 0 auto; padding: var(--s1) var(--s5) var(--s6); }
+.page.ink .paper { padding-bottom: 96px; }
+.stamp { margin: var(--s1) 0 var(--s3); text-align: center; font-size: 13px; color: var(--muted); }
+.page-title { min-height: 44px; padding: var(--s1) 0; font-size: 26px; font-weight: 700; }
+.page-body { min-height: 40dvh; font-size: 17px; }
+
+/* floating pen tools, they do not take space from the paper */
+.dock { left: 50%; right: auto; bottom: calc(var(--s3) + env(safe-area-inset-bottom)); width: max-content; max-width: calc(100% - 24px); align-items: center; gap: 2px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 28px; box-shadow: 0 4px 20px #0000002e; transform: translateX(-50%); scrollbar-width: none; }
+.dock::-webkit-scrollbar { display: none; }
+.dock .tool { width: 40px; min-width: 40px; height: 40px; min-height: 40px; padding: 0; background: transparent; color: var(--text); border-radius: 50%; }
+.dock button[aria-pressed="true"] { background: var(--yellow); color: var(--on-yellow); }
+.dock .swatch[aria-pressed="true"] { background: transparent; outline: 2px solid var(--text); outline-offset: -3px; }
+.dock .size span { display: block; border-radius: 50%; background: currentColor; }
+.dock .sep { flex: none; width: 1px; height: 22px; margin: 0 4px; background: var(--line); }
+
+/* landscape: slim bars, more paper */
+@media (orientation: landscape) and (max-height: 520px) {
+  .appbar.large { padding-top: calc(env(safe-area-inset-top) + var(--s1)); }
+  .appbar.large h1 { font-size: 26px; }
+  .appbar.edit { min-height: calc(40px + env(safe-area-inset-top)); }
+  .appbar.edit button { min-height: 40px; }
+  .paper { padding: 0 var(--s6) var(--s5); }
+  .page.ink .paper { padding-bottom: 72px; }
+  .stamp { display: none; }
+  .page-title { min-height: 40px; font-size: 22px; }
+  .page-body { min-height: 50dvh; }
+  .nav button { flex-direction: row; justify-content: center; gap: var(--s2); min-height: 44px; }
+  .dock { bottom: calc(var(--s2) + env(safe-area-inset-bottom)); }
+}

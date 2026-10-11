@@ -14,9 +14,9 @@ Features and "Done when":
 6. Practice questions: AI makes questions from a note; user can import images and files into a note or the chat.
 
 ## Status
-Current phase: 3, app shell redesign (4 screens, whole-page notes, settings) built, waiting for user test
+Current phase: 3, iOS Notes look and landscape fix (1.4.0) built, waiting for user test
 Done: scope approved
-Next: user tests the new shell, then AI chat page
+Next: user tests 1.4.0 in portrait and landscape, then AI chat page
 
 ## Handoff
 Read SKILL.md first. Version line is shown on the main screen.
@@ -28,7 +28,7 @@ Read SKILL.md first. Version line is shown on the main screen.
 None yet
 
 ## Versions
-versionName 1.3.0, versionCode 4 (android/app/build.gradle)
+versionName 1.4.0, versionCode 5 (android/app/build.gradle)
 
 ## Screens (updated for 1.3.0)
 1. Notes manager: search, select and delete many, new note button, bottom navigation.
@@ -36,3 +36,7 @@ versionName 1.3.0, versionCode 4 (android/app/build.gradle)
 3. AI page: placeholder until the chat is built.
 4. Settings: OpenRouter API key and model name, stored on the device only.
 Files: www/core.js, www/ink.js, www/editor.js, www/app.js
+
+## Changes in 1.4.0
+- Look: iOS Notes style (grouped lists, yellow accent, large titles, tab bar with line icons). New file www/ios.css loads after style.css.
+- Note page: fixed full-screen view, the paper scrolls inside it, floating tool pill that takes no paper space, slim bars in landscape.

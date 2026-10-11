@@ -1,31 +1,9 @@
-const APP_VERSION = "1.2.0 (3)";
-const KEY = "notemind.notes";
-const $ = function (id) { return document.getElementById(id); };
+const APP_VERSION = "1.3.0 (4)";
 
-let notes = load();
-let current = null;
-let timer = null;
+let editing = false;
 let pushed = false;
-
-function load() {
-  try {
-    const raw = localStorage.getItem(KEY);
-    const list = raw ? JSON.parse(raw) : [];
-    return Array.isArray(list) ? list : [];
-  } catch (e) {
-    return [];
-  }
-}
-
-function persist() {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(notes));
-    return true;
-  } catch (e) {
-    $("saved").textContent = "บันทึกไม่ได้: " + e.message;
-    return false;
-  }
-}
+let selecting = false;
+let selected = new Set();
 
 function fmt(ms) {
   try {
@@ -35,33 +13,40 @@ function fmt(ms) {
   }
 }
 
-function newId() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-}
-
-function isDraw(n) {
-  return n.type === "draw";
-}
-
-function isEmpty(n) {
-  if (n.title.trim()) { return false; }
-  return isDraw(n) ? !(n.strokes && n.strokes.length) : !n.body.trim();
-}
-
 function show(name) {
-  $("view-list").hidden = name !== "list";
-  $("view-edit").hidden = name !== "edit";
+  ["notes", "ai", "settings", "edit"].forEach(function (n) {
+    $("view-" + n).hidden = n !== name;
+  });
+  const tabbed = name !== "edit";
+  const sel = name === "notes" && selecting;
+  $("nav").hidden = !tabbed || sel;
+  $("selbar").hidden = !sel;
+  $("new").hidden = !(name === "notes" && !selecting);
+  document.querySelectorAll("#nav button").forEach(function (b) {
+    if (b.dataset.tab === name) { b.setAttribute("aria-current", "page"); } else { b.removeAttribute("aria-current"); }
+  });
 }
 
 function renderList() {
+  const q = $("search").value.trim().toLowerCase();
   const box = $("list");
   box.textContent = "";
-  const sorted = notes.slice().sort(function (a, b) { return b.updated - a.updated; });
-  sorted.forEach(function (n) {
+  const all = Store.all();
+  const rows = all.filter(function (n) {
+    return !q || (n.title + " " + n.body).toLowerCase().indexOf(q) >= 0;
+  }).sort(function (a, b) { return b.updated - a.updated; });
+  rows.forEach(function (n) {
     const li = document.createElement("li");
     li.className = "row";
     li.setAttribute("role", "button");
     li.tabIndex = 0;
+    if (selecting) {
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = selected.has(n.id);
+      cb.tabIndex = -1;
+      li.appendChild(cb);
+    }
     const grow = document.createElement("div");
     grow.className = "grow";
     const t = document.createElement("div");
@@ -69,69 +54,71 @@ function renderList() {
     t.textContent = n.title || "ไม่มีหัวข้อ";
     const m = document.createElement("div");
     m.className = "muted small";
-    const what = isDraw(n)
-      ? "เขียนมือ " + (n.strokes ? n.strokes.length : 0) + " เส้น"
-      : (n.body || "").replace(/\s+/g, " ").slice(0, 60);
-    m.textContent = fmt(n.updated) + (what ? "  " + what : "");
+    const text = (n.body || "").replace(/\s+/g, " ").slice(0, 50);
+    const ink = n.strokes.length ? "เขียนมือ " + n.strokes.length + " เส้น" : "";
+    m.textContent = [fmt(n.updated), text, ink].filter(Boolean).join("  ");
     grow.appendChild(t);
     grow.appendChild(m);
     li.appendChild(grow);
-    li.addEventListener("click", function () { openNote(n.id); });
+    li.addEventListener("click", function () {
+      if (selecting) {
+        if (selected.has(n.id)) { selected.delete(n.id); } else { selected.add(n.id); }
+        renderList();
+      } else {
+        openNote(n.id);
+      }
+    });
     box.appendChild(li);
   });
-  $("empty").hidden = notes.length > 0;
+  $("empty").textContent = q ? "ไม่พบโน้ต" : "ยังไม่มีโน้ต กดปุ่ม + เพื่อสร้าง";
+  $("empty").hidden = rows.length > 0;
+  $("sel-delete").textContent = "ลบที่เลือก (" + selected.size + ")";
+  $("sel-delete").disabled = selected.size === 0;
+  $("select").textContent = selecting ? "เสร็จ" : "เลือก";
+}
+
+function setSelecting(on) {
+  selecting = on;
+  selected = new Set();
+  renderList();
+  show("notes");
+}
+
+function renderAi() {
+  const s = Store.settings();
+  $("ai-status").textContent = (s.apiKey ? "API key: ตั้งค่าแล้ว" : "API key: ยังไม่ได้ตั้งค่า (ไปที่หน้าตั้งค่า)") +
+    "   โมเดล: " + (s.model || "ยังไม่ได้ตั้งค่า");
+}
+
+function renderSettings() {
+  const s = Store.settings();
+  $("apikey").value = s.apiKey;
+  $("model").value = s.model;
+  $("apikey").type = "password";
+  $("showkey").textContent = "แสดง key";
+  $("settings-msg").textContent = "";
   $("ver").textContent = "NoteMind v" + APP_VERSION;
-}
-
-function flush() {
-  if (timer) { clearTimeout(timer); timer = null; }
-  if (current) {
-    current.title = $("title").value;
-    if (!isDraw(current)) { current.body = $("body").value; }
-    if (persist()) { $("saved").textContent = "บันทึกแล้ว"; }
-  }
-}
-
-function leaveEdit() {
-  if (!current) { return; }
-  flush();
-  if (isEmpty(current)) {
-    notes = notes.filter(function (n) { return n.id !== current.id; });
-    persist();
-  }
-  Draw.close();
-  current = null;
-}
-
-function schedule() {
-  $("saved").textContent = "กำลังบันทึก";
-  if (current) { current.updated = Date.now(); }
-  if (timer) { clearTimeout(timer); }
-  timer = setTimeout(flush, 400);
 }
 
 function route() {
   const m = /^#\/note\/(.+)$/.exec(location.hash);
   if (m) {
-    const n = notes.find(function (x) { return x.id === m[1]; });
+    const n = Store.get(m[1]);
     if (n) {
-      if (current && current.id !== n.id) { leaveEdit(); }
-      current = n;
-      $("title").value = n.title;
-      $("saved").textContent = "";
-      const d = isDraw(n);
-      $("text-fields").hidden = d;
-      $("draw-area").hidden = !d;
-      $("tools").hidden = !d;
-      if (!d) { $("body").value = n.body; }
+      if (editing) { Editor.leave(); }
+      Editor.open(n);
+      editing = true;
       show("edit");
-      if (d) { Draw.open(n, schedule); }
       return;
     }
   }
-  leaveEdit();
-  renderList();
-  show("list");
+  if (editing) { Editor.leave(); editing = false; }
+  const tab = location.hash === "#/ai" ? "ai" : (location.hash === "#/settings" ? "settings" : "notes");
+  if (tab !== "notes") { selecting = false; }
+  if (tab === "notes") { renderList(); }
+  if (tab === "ai") { renderAi(); }
+  if (tab === "settings") { renderSettings(); }
+  show(tab);
 }
 
 function openNote(id) {
@@ -139,41 +126,57 @@ function openNote(id) {
   location.hash = "#/note/" + id;
 }
 
-function create(type) {
-  const n = { id: newId(), type: type, title: "", updated: Date.now() };
-  if (type === "draw") { n.strokes = []; } else { n.body = ""; }
-  notes.push(n);
-  openNote(n.id);
-  if (type === "text") { setTimeout(function () { $("body").focus(); }, 50); }
-}
-
-$("new").addEventListener("click", function () { create("text"); });
-$("new-draw").addEventListener("click", function () { create("draw"); });
-
-$("back").addEventListener("click", function () {
-  if (pushed) { pushed = false; history.back(); } else { location.hash = "#/"; }
+document.querySelectorAll("#nav button").forEach(function (b) {
+  b.addEventListener("click", function () {
+    location.replace(b.dataset.tab === "notes" ? "#/" : "#/" + b.dataset.tab);
+  });
 });
 
-$("title").addEventListener("input", schedule);
-$("body").addEventListener("input", schedule);
+$("new").addEventListener("click", function () {
+  const n = Store.add();
+  openNote(n.id);
+  setTimeout(function () { Editor.focusBody(); }, 50);
+});
 
-$("del").addEventListener("click", function () { $("confirm").hidden = false; });
-$("confirm-no").addEventListener("click", function () { $("confirm").hidden = true; });
-$("confirm-yes").addEventListener("click", function () {
-  $("confirm").hidden = true;
-  if (current) {
-    const id = current.id;
-    notes = notes.filter(function (n) { return n.id !== id; });
-    persist();
-    Draw.close();
-    current = null;
-  }
-  location.hash = "#/";
+$("search").addEventListener("input", renderList);
+$("select").addEventListener("click", function () { setSelecting(!selecting); });
+$("sel-done").addEventListener("click", function () { setSelecting(false); });
+$("sel-delete").addEventListener("click", function () {
+  const ids = Array.from(selected);
+  if (!ids.length) { return; }
+  Dialog.ask("ลบ " + ids.length + " โน้ต", "ลบแล้วเอากลับมาไม่ได้", "ลบ", function () {
+    Store.remove(ids);
+    Store.save();
+    setSelecting(false);
+  });
+});
+
+$("back").addEventListener("click", function () {
+  if (pushed) { pushed = false; history.back(); } else { location.replace("#/"); }
+});
+$("del").addEventListener("click", function () {
+  Dialog.ask("ลบโน้ตนี้", "ลบแล้วเอากลับมาไม่ได้", "ลบ", function () {
+    Editor.discard();
+    editing = false;
+    pushed = false;
+    location.replace("#/");
+    route();
+  });
+});
+
+$("showkey").addEventListener("click", function () {
+  const hidden = $("apikey").type === "password";
+  $("apikey").type = hidden ? "text" : "password";
+  $("showkey").textContent = hidden ? "ซ่อน key" : "แสดง key";
+});
+$("save-settings").addEventListener("click", function () {
+  const err = Store.saveSettings({ apiKey: $("apikey").value.trim(), model: $("model").value.trim() });
+  $("settings-msg").textContent = err ? "บันทึกไม่ได้: " + err : "บันทึกแล้ว";
 });
 
 document.addEventListener("visibilitychange", function () {
-  if (document.visibilityState === "hidden") { flush(); }
+  if (document.visibilityState === "hidden") { Editor.flush(); }
 });
-window.addEventListener("pagehide", flush);
+window.addEventListener("pagehide", function () { Editor.flush(); });
 window.addEventListener("hashchange", route);
 route();

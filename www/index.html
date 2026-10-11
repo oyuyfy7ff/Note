@@ -7,15 +7,49 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <section id="view-list" hidden>
-    <header class="appbar"><h1>NoteMind</h1></header>
+  <section id="view-notes" hidden>
+    <header class="appbar">
+      <h1>โน้ต</h1>
+      <button type="button" class="soft" id="select">เลือก</button>
+    </header>
     <main class="screen">
-      <div class="grid2">
-        <button type="button" id="new">โน้ตพิมพ์</button>
-        <button type="button" class="soft" id="new-draw">โน้ตเขียนมือ</button>
+      <div class="field">
+        <label for="search">ค้นหา</label>
+        <input id="search" type="search" autocomplete="off" placeholder="ชื่อหรือเนื้อหาโน้ต">
       </div>
       <ul class="list" id="list"></ul>
-      <p class="empty" id="empty">ยังไม่มีโน้ต</p>
+      <p class="empty" id="empty"></p>
+    </main>
+    <button type="button" class="fab" id="new" aria-label="โน้ตใหม่">+</button>
+  </section>
+
+  <section id="view-ai" hidden>
+    <header class="appbar"><h1>AI</h1></header>
+    <main class="screen">
+      <div class="card">
+        <h3>ผู้ช่วย AI</h3>
+        <p class="muted">ส่วนแชตจะเปิดใช้ในขั้นถัดไป</p>
+      </div>
+      <p class="muted small" id="ai-status"></p>
+    </main>
+  </section>
+
+  <section id="view-settings" hidden>
+    <header class="appbar"><h1>ตั้งค่า</h1></header>
+    <main class="screen">
+      <p class="muted small">AI (OpenRouter)</p>
+      <div class="field">
+        <label for="apikey">API key</label>
+        <input id="apikey" type="password" autocomplete="off" autocapitalize="off" spellcheck="false">
+      </div>
+      <div class="field">
+        <label for="model">ชื่อโมเดล</label>
+        <input id="model" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="provider/model">
+      </div>
+      <button type="button" class="soft block" id="showkey">แสดง key</button>
+      <button type="button" class="block" id="save-settings">บันทึก</button>
+      <p class="muted small" id="settings-msg"></p>
+      <p class="muted small">key เก็บไว้ในเครื่องนี้เท่านั้น ไม่ถูกส่งขึ้น GitHub</p>
       <p class="muted small" id="ver"></p>
       <pre id="err"></pre>
     </main>
@@ -24,10 +58,17 @@
   <section id="view-edit" hidden>
     <header class="appbar">
       <button type="button" class="soft" id="back">กลับ</button>
-      <h1>โน้ต</h1>
+      <h1></h1>
+      <button type="button" class="soft" id="mode">เขียนมือ</button>
       <button type="button" class="danger" id="del">ลบ</button>
     </header>
-    <div class="toolbar tools" id="tools" hidden>
+    <div class="page" id="page">
+      <input class="page-title" id="title" type="text" autocomplete="off" placeholder="หัวข้อ">
+      <textarea class="page-body" id="body" placeholder="เริ่มพิมพ์ หรือกดเขียนมือ"></textarea>
+      <p class="muted small" id="saved"></p>
+      <canvas id="pad" width="800" height="1200"></canvas>
+    </div>
+    <div class="dock" id="dock" hidden>
       <button type="button" class="soft" data-tool="pen" aria-pressed="true">ปากกา</button>
       <button type="button" class="soft" data-tool="eraser" aria-pressed="false">ยางลบ</button>
       <button type="button" class="soft" data-tool="scroll" aria-pressed="false">เลื่อนหน้า</button>
@@ -41,26 +82,23 @@
       <button type="button" class="soft" data-size="6" aria-pressed="true">กลาง</button>
       <button type="button" class="soft" data-size="12" aria-pressed="false">หนา</button>
     </div>
-    <main class="screen">
-      <div class="field">
-        <label for="title">หัวข้อ</label>
-        <input id="title" type="text" autocomplete="off">
-      </div>
-      <div class="field" id="text-fields">
-        <label for="body">เนื้อหา</label>
-        <textarea id="body"></textarea>
-      </div>
-      <div id="draw-area" hidden>
-        <canvas id="pad" width="800" height="1200"></canvas>
-      </div>
-      <p class="muted small" id="saved"></p>
-    </main>
   </section>
+
+  <nav class="nav" id="nav" hidden>
+    <button type="button" data-tab="notes" aria-current="page">โน้ต</button>
+    <button type="button" data-tab="ai">AI</button>
+    <button type="button" data-tab="settings">ตั้งค่า</button>
+  </nav>
+
+  <div class="selbar" id="selbar" hidden>
+    <button type="button" class="soft" id="sel-done">เสร็จ</button>
+    <button type="button" class="danger" id="sel-delete">ลบที่เลือก</button>
+  </div>
 
   <div class="scrim" id="confirm" hidden>
     <div class="sheet">
-      <h2>ลบโน้ตนี้</h2>
-      <p class="muted">ลบแล้วเอากลับมาไม่ได้</p>
+      <h2 id="confirm-title"></h2>
+      <p class="muted" id="confirm-text"></p>
       <button type="button" class="danger block" id="confirm-yes">ลบ</button>
       <button type="button" class="soft block" id="confirm-no">ยกเลิก</button>
     </div>
@@ -74,7 +112,9 @@
       document.getElementById("err").textContent += "Promise: " + e.reason + "\n";
     });
   </script>
-  <script src="draw.js"></script>
+  <script src="core.js"></script>
+  <script src="ink.js"></script>
+  <script src="editor.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

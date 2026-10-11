@@ -14,9 +14,9 @@ Features and "Done when":
 6. Practice questions: AI makes questions from a note; user can import images and files into a note or the chat.
 
 ## Status
-Current phase: 3, feature 2 (handwritten notes) built, waiting for user test
+Current phase: 3, app shell redesign (4 screens, whole-page notes, settings) built, waiting for user test
 Done: scope approved
-Next: user tests feature 2, then feature 3 (settings)
+Next: user tests the new shell, then AI chat page
 
 ## Handoff
 Read SKILL.md first. Version line is shown on the main screen.
@@ -28,4 +28,11 @@ Read SKILL.md first. Version line is shown on the main screen.
 None yet
 
 ## Versions
-versionName 1.2.0, versionCode 3 (android/app/build.gradle)
+versionName 1.3.0, versionCode 4 (android/app/build.gradle)
+
+## Screens (updated for 1.3.0)
+1. Notes manager: search, select and delete many, new note button, bottom navigation.
+2. Note page: whole screen, typing and handwriting on the same page (ink layer over the text), tool dock in handwriting mode.
+3. AI page: placeholder until the chat is built.
+4. Settings: OpenRouter API key and model name, stored on the device only.
+Files: www/core.js, www/ink.js, www/editor.js, www/app.js

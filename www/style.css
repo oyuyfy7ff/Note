@@ -374,16 +374,25 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--main); outl
 /* development error box (remove at release) */
 #err { color: var(--danger); white-space: pre-wrap; text-align: left; font-size: 14px; }
 
-/* notes screens */
+/* app shell */
 section { flex: 1; display: flex; flex-direction: column; }
-section[hidden] { display: none; }
-textarea { resize: none; min-height: 40dvh; }
+section[hidden], .nav[hidden], .selbar[hidden], .fab[hidden], .dock[hidden], .field[hidden] { display: none; }
 .appbar .soft, .appbar .danger { padding: 0 var(--s4); }
-/* handwriting */
-.field[hidden], .tools[hidden] { display: none; }
-.tools { position: sticky; top: calc(var(--bar-h) + env(safe-area-inset-top)); z-index: 9; background: var(--bg); }
-.tools button[aria-pressed="true"] { background: var(--main); color: var(--on-main); }
-.tools button:disabled { opacity: 0.4; }
-.tools .swatch[aria-pressed="true"] { background: var(--surface2); outline: 2px solid var(--main); outline-offset: -2px; }
+input[type="checkbox"] { width: 24px; min-height: 24px; flex: none; }
+.selbar { position: sticky; bottom: 0; z-index: 10; display: flex; gap: var(--s2); padding: var(--s2) var(--s4) calc(var(--s2) + env(safe-area-inset-bottom)); background: var(--surface); border-top: 1px solid var(--line); }
+.selbar button { flex: 1; }
+
+/* note page (whole screen) */
+.page { position: relative; display: flex; flex-direction: column; flex: 1; gap: var(--s2); padding: var(--s4); }
+.page.ink { padding-bottom: 96px; }
+.page-title { min-height: 48px; padding: var(--s2) 0; font-size: 28px; font-weight: 600; background: transparent; border: 0; border-radius: 0; }
+.page-body { flex: none; min-height: 60dvh; padding: 0; font-size: 18px; line-height: 1.6; background: transparent; border: 0; border-radius: 0; resize: none; overflow: hidden; }
+.page-title:focus, .page-body:focus { outline: none; }
+#pad { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.page.ink #pad { pointer-events: auto; }
+.dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 15; display: flex; gap: var(--s1); overflow-x: auto; padding: var(--s2) var(--s4) calc(var(--s2) + env(safe-area-inset-bottom)); background: var(--surface); border-top: 1px solid var(--line); }
+.dock > * { flex: none; }
+.dock button[aria-pressed="true"] { background: var(--main); color: var(--on-main); }
+.dock button:disabled { opacity: 0.4; }
+.dock .swatch[aria-pressed="true"] { background: var(--surface2); outline: 2px solid var(--main); outline-offset: -2px; }
 .swatch span { display: block; width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--line); }
-#draw-area canvas { display: block; width: 100%; height: auto; background: #ffffff; border: 1px solid var(--line); border-radius: var(--radius-sm); }

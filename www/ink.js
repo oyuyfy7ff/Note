@@ -1,11 +1,13 @@
-const Draw = (function () {
+const Ink = (function () {
   const W = 800;
-  const H = 1200;
   const ERASE_R = 14;
-  const canvas = document.getElementById("pad");
+  const canvas = $("pad");
+  const page = $("page");
   const ctx = canvas.getContext("2d");
+  const dark = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
   let note = null;
   let onChange = function () {};
+  let active = false;
   let tool = "pen";
   let color = "#111111";
   let size = 6;
@@ -15,9 +17,14 @@ const Draw = (function () {
   let erasing = false;
   let erasedNow = false;
 
+  function shade(c) {
+    return (c === "#111111" && dark && dark.matches) ? "#ececec" : c;
+  }
+
   function drawStroke(s) {
-    ctx.strokeStyle = s.c;
-    ctx.fillStyle = s.c;
+    const c = shade(s.c);
+    ctx.strokeStyle = c;
+    ctx.fillStyle = c;
     ctx.lineWidth = s.w;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
@@ -41,28 +48,42 @@ const Draw = (function () {
   }
 
   function redraw() {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     const k = canvas.width / W;
     ctx.setTransform(k, 0, 0, k, 0, 0);
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, W, H);
     if (note) { note.strokes.forEach(drawStroke); }
     if (live) { drawStroke(live); }
   }
 
   function fit() {
     const w = canvas.clientWidth;
-    if (!w) { return; }
+    const h = canvas.clientHeight;
+    if (!w || !h) { return; }
     const dpr = window.devicePixelRatio || 1;
     canvas.width = Math.round(w * dpr);
-    canvas.height = Math.round(w * dpr * H / W);
+    canvas.height = Math.round(h * dpr);
     redraw();
+  }
+
+  function applyHeight() {
+    if (!note) { return; }
+    const w = canvas.clientWidth || page.clientWidth;
+    if (w) { page.style.minHeight = Math.round(note.h * w / W) + "px"; }
+  }
+
+  function grow(y) {
+    if (note && y > note.h - 250) {
+      note.h = Math.round(y + 900);
+      applyHeight();
+    }
   }
 
   function pos(e) {
     const r = canvas.getBoundingClientRect();
     return [
       Math.round((e.clientX - r.left) * W / r.width * 10) / 10,
-      Math.round((e.clientY - r.top) * H / r.height * 10) / 10
+      Math.round((e.clientY - r.top) * W / r.width * 10) / 10
     ];
   }
 
@@ -72,9 +93,7 @@ const Draw = (function () {
     const len2 = dx * dx + dy * dy;
     let t = len2 ? ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / len2 : 0;
     t = Math.max(0, Math.min(1, t));
-    const cx = a[0] + t * dx;
-    const cy = a[1] + t * dy;
-    return Math.hypot(p[0] - cx, p[1] - cy);
+    return Math.hypot(p[0] - (a[0] + t * dx), p[1] - (a[1] + t * dy));
   }
 
   function hits(s, p) {
@@ -90,7 +109,6 @@ const Draw = (function () {
     undoStack.push(note.strokes.slice());
     if (undoStack.length > 60) { undoStack.shift(); }
     redoStack = [];
-    buttons();
   }
 
   function eraseAt(p) {
@@ -100,12 +118,14 @@ const Draw = (function () {
     note.strokes = keep;
     redraw();
     onChange();
+    buttons();
   }
 
   function down(e) {
-    if (!note || tool === "scroll") { return; }
+    if (!note || !active || tool === "scroll") { return; }
     try { canvas.setPointerCapture(e.pointerId); } catch (x) { /* ignore */ }
     const p = pos(e);
+    grow(p[1]);
     if (tool === "pen") {
       live = { c: color, w: size, pts: [p] };
       redraw();
@@ -117,12 +137,13 @@ const Draw = (function () {
   }
 
   function move(e) {
-    if (!note) { return; }
+    if (!note || !active) { return; }
     const p = pos(e);
     if (live) {
       const q = live.pts[live.pts.length - 1];
       if (Math.hypot(p[0] - q[0], p[1] - q[1]) >= 1.5) {
         live.pts.push(p);
+        grow(p[1]);
         redraw();
       }
     } else if (erasing) {
@@ -131,7 +152,7 @@ const Draw = (function () {
   }
 
   function up() {
-    if (live) {
+    if (live && note) {
       remember();
       note.strokes.push(live);
       live = null;
@@ -139,6 +160,7 @@ const Draw = (function () {
       onChange();
       buttons();
     }
+    live = null;
     erasing = false;
   }
 
@@ -161,8 +183,8 @@ const Draw = (function () {
   }
 
   function buttons() {
-    document.getElementById("undo").disabled = !undoStack.length;
-    document.getElementById("redo").disabled = !redoStack.length;
+    $("undo").disabled = !undoStack.length;
+    $("redo").disabled = !redoStack.length;
     document.querySelectorAll("[data-tool]").forEach(function (b) {
       b.setAttribute("aria-pressed", String(b.dataset.tool === tool));
     });
@@ -184,8 +206,8 @@ const Draw = (function () {
   canvas.addEventListener("pointermove", move);
   canvas.addEventListener("pointerup", up);
   canvas.addEventListener("pointercancel", up);
-  document.getElementById("undo").addEventListener("click", undo);
-  document.getElementById("redo").addEventListener("click", redo);
+  $("undo").addEventListener("click", undo);
+  $("redo").addEventListener("click", redo);
   document.querySelectorAll("[data-tool]").forEach(function (b) {
     b.addEventListener("click", function () { setTool(b.dataset.tool); });
   });
@@ -195,21 +217,26 @@ const Draw = (function () {
   document.querySelectorAll("[data-size]").forEach(function (b) {
     b.addEventListener("click", function () { size = Number(b.dataset.size); setTool("pen"); });
   });
-  window.addEventListener("resize", function () { if (note) { fit(); } });
+  window.addEventListener("resize", function () { if (note) { applyHeight(); fit(); } });
+  if (window.ResizeObserver) {
+    new ResizeObserver(function () { if (note) { fit(); } }).observe(canvas);
+  }
+  if (dark && dark.addEventListener) { dark.addEventListener("change", redraw); }
   canvas.style.touchAction = "none";
 
   return {
     open: function (n, cb) {
       note = n;
-      if (!Array.isArray(note.strokes)) { note.strokes = []; }
       onChange = cb;
       undoStack = [];
       redoStack = [];
       live = null;
       erasing = false;
+      applyHeight();
       buttons();
       fit();
     },
-    close: function () { note = null; live = null; }
+    close: function () { note = null; live = null; erasing = false; },
+    setActive: function (on) { active = on; setTool(tool); }
   };
 })();

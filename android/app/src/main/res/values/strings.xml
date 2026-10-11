@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">NoteMind</string>
+    <string name="title_activity_main">NoteMind</string>
+    <string name="package_name">com.g.notemind</string>
+    <string name="custom_url_scheme">com.g.notemind</string>
+</resources>

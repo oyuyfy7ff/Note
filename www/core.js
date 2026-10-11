@@ -26,6 +26,7 @@ const Store = (function () {
     n.title = n.title || "";
     n.body = n.body || "";
     n.strokes = Array.isArray(n.strokes) ? n.strokes : [];
+    n.images = Array.isArray(n.images) ? n.images : [];
     n.h = n.h || 1200;
     n.updated = n.updated || Date.now();
     return n;
@@ -44,10 +45,13 @@ const Store = (function () {
       return n;
     },
     remove: function (ids) {
+      notes.forEach(function (n) {
+        if (ids.indexOf(n.id) >= 0) { n.images.forEach(function (id) { Images.remove(id); }); }
+      });
       notes = notes.filter(function (n) { return ids.indexOf(n.id) < 0; });
     },
     isEmpty: function (n) {
-      return !n.title.trim() && !n.body.trim() && n.strokes.length === 0;
+      return !n.title.trim() && !n.body.trim() && n.strokes.length === 0 && n.images.length === 0;
     },
     save: function () { return write(NOTES_KEY, notes); },
     settings: function () {

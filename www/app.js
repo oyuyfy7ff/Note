@@ -1,4 +1,4 @@
-const APP_VERSION = "1.4.0 (5)";
+const APP_VERSION = "1.5.0 (6)";
 
 let editing = false;
 let pushed = false;
@@ -95,7 +95,7 @@ function renderList() {
     t.textContent = tp[0];
     const m = document.createElement("div");
     m.className = "m";
-    const extra = tp[1].slice(0, 60) || (n.strokes.length ? "เขียนมือ" : "ไม่มีข้อความเพิ่มเติม");
+    const extra = tp[1].slice(0, 60) || (n.images.length ? "รูปภาพ " + n.images.length + " รูป" : (n.strokes.length ? "เขียนมือ" : "ไม่มีข้อความเพิ่มเติม"));
     m.textContent = rowTime(n.updated, start) + "  " + extra;
     grow.appendChild(t);
     grow.appendChild(m);

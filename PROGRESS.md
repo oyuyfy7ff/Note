@@ -14,9 +14,9 @@ Features and "Done when":
 6. Practice questions: AI makes questions from a note; user can import images and files into a note or the chat.
 
 ## Status
-Current phase: 3, iOS Notes look and landscape fix (1.4.0) built, waiting for user test
+Current phase: 3, images in notes (1.5.0) built, waiting for user test
 Done: scope approved
-Next: user tests 1.4.0 in portrait and landscape, then AI chat page
+Next: user tests 1.5.0 (add, view and delete images), then AI chat page
 
 ## Handoff
 Read SKILL.md first. Version line is shown on the main screen.
@@ -28,7 +28,7 @@ Read SKILL.md first. Version line is shown on the main screen.
 None yet
 
 ## Versions
-versionName 1.4.0, versionCode 5 (android/app/build.gradle)
+versionName 1.5.0, versionCode 6 (android/app/build.gradle)
 
 ## Screens (updated for 1.3.0)
 1. Notes manager: search, select and delete many, new note button, bottom navigation.
@@ -40,3 +40,6 @@ Files: www/core.js, www/ink.js, www/editor.js, www/app.js
 ## Changes in 1.4.0
 - Look: iOS Notes style (grouped lists, yellow accent, large titles, tab bar with line icons). New file www/ios.css loads after style.css.
 - Note page: fixed full-screen view, the paper scrolls inside it, floating tool pill that takes no paper space, slim bars in landscape.
+
+## Changes in 1.5.0
+- Images in notes: image button in the note top bar (several at once, shrunk to 1600 px), shown under the title, tap to delete, ink draws over them. New file www/images.js keeps the pictures in IndexedDB (ids are saved in note.images). Deleting a note deletes its pictures.

@@ -105,6 +105,12 @@ input[type="checkbox"]:checked::after { content: ""; position: absolute; left: 7
 .dock .size span { display: block; border-radius: 50%; background: currentColor; }
 .dock .sep { flex: none; width: 1px; height: 22px; margin: 0 4px; background: var(--line); }
 
+/* images in a note */
+#images:empty { display: none; }
+.pic { margin: 0 0 var(--s3); overflow: hidden; background: var(--surface2); border-radius: var(--radius); }
+.pic img { display: block; width: 100%; max-height: 80dvh; object-fit: contain; }
+.pic.broken { min-height: 80px; }
+
 /* landscape: slim bars, more paper */
 @media (orientation: landscape) and (max-height: 520px) {
   .appbar.large { padding-top: calc(env(safe-area-inset-top) + var(--s1)); }

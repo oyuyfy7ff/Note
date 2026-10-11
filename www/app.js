@@ -1,4 +1,4 @@
-const APP_VERSION = "1.5.0 (6)";
+const APP_VERSION = "1.6.0 (7)";
 
 let editing = false;
 let pushed = false;

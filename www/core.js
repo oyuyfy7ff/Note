@@ -27,6 +27,7 @@ const Store = (function () {
     n.body = n.body || "";
     n.strokes = Array.isArray(n.strokes) ? n.strokes : [];
     n.images = Array.isArray(n.images) ? n.images : [];
+    n.layout = n.layout && typeof n.layout === "object" && !Array.isArray(n.layout) ? n.layout : {};
     n.h = n.h || 1200;
     n.updated = n.updated || Date.now();
     return n;

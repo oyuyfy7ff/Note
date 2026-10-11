@@ -12,23 +12,29 @@ Features and "Done when":
 4. Cut menu: drag a box over part of a note and send it to the chat, or copy text into the chat (handwriting goes as an image, needs a vision model).
 5. Settings: OpenRouter API key and model name typed by the user, stored on the device only.
 6. Practice questions: AI makes questions from a note; user can import images and files into a note or the chat.
+7. Images in a note: add, tap to select, drag to move, drag the corner dot to resize, tap the bin to delete.
+   Done when: add 2 images, tap one, drag it to a new place, drag the corner dot to make it smaller, close and reopen the note, the place and size are kept.
 
 ## Status
-Current phase: 3, images in notes (1.5.0) built, waiting for user test
-Done: scope approved
-Next: user tests 1.5.0 (add, view and delete images), then AI chat page
+Current phase: 3, image move and resize (1.6.0) built, waiting for user test
+Done: scope approved, features 1 and 2 built, images in notes (1.5.0)
+Next: user tests 1.6.0 (select, move, resize, delete, reopen), then AI chat page (feature 3, version 1.7.0)
 
 ## Handoff
-Read SKILL.md first. Version line is shown on the main screen.
+Last worked by: Claude (Sonnet 5.5), 2026-10-11
+Changed: www/editor.js (select, move, resize, delete for images), www/core.js (note.layout), www/ios.css (image controls), versions
+Not tested: on the real phone (touch gestures, landscape)
+Tested in desktop Chromium with a mouse: resize, move, reopen, delete.
+Version line is shown on the settings screen.
 
 ## Planned file tree
-.github/workflows/build.yml, package.json, capacitor.config.json, www/index.html, www/style.css, www/app.js
+.github/workflows/build.yml, package.json, capacitor.config.json, www/index.html, www/style.css, www/ios.css, www/core.js, www/images.js, www/ink.js, www/editor.js, www/app.js
 
 ## Known bugs
 None yet
 
 ## Versions
-versionName 1.5.0, versionCode 6 (android/app/build.gradle)
+versionName 1.6.0, versionCode 7 (android/app/build.gradle)
 
 ## Screens (updated for 1.3.0)
 1. Notes manager: search, select and delete many, new note button, bottom navigation.
@@ -43,3 +49,6 @@ Files: www/core.js, www/ink.js, www/editor.js, www/app.js
 
 ## Changes in 1.5.0
 - Images in notes: image button in the note top bar (several at once, shrunk to 1600 px), shown under the title, tap to delete, ink draws over them. New file www/images.js keeps the pictures in IndexedDB (ids are saved in note.images). Deleting a note deletes its pictures.
+
+## Changes in 1.6.0
+- Images can be moved and resized. Tap an image to select it: a bin button (top left) deletes it, a dot (bottom right) resizes it with the aspect ratio kept, dragging the image moves it. Tap outside to unselect. Position and size are saved in note.layout[id] = { x, y, w, ar } (x and w are fractions of the paper width, y is pixels, ar is height divided by width). Old images get a default place (full width, stacked) the first time the note is opened. Touch is turned off for gestures while handwriting mode is on.

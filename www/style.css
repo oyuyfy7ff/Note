@@ -374,6 +374,8 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--main); outl
 /* development error box (remove at release) */
 #err { color: var(--danger); white-space: pre-wrap; text-align: left; font-size: 14px; }
 
-/* skeleton only */
-main { text-align: center; margin-top: 64px; padding: 16px; }
-h1 { font-size: 64px; }
+/* notes screens */
+section { flex: 1; display: flex; flex-direction: column; }
+section[hidden] { display: none; }
+textarea { resize: none; min-height: 40dvh; }
+.appbar .soft, .appbar .danger { padding: 0 var(--s4); }

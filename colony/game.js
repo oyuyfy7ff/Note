@@ -1168,6 +1168,7 @@ window.__colony = {
   save: saveGame,
   reload() { const ok = loadGame(); if (ok) { logDirty = true; ui.prioKey = ''; buildGround(); ui.dirty = true; } return ok; },
   restart,
+  colonistClientPos(id) { const c = S.col.find(c => c.id === id); if (!c) return null; const q = lerpPos(c, S.tick + alpha); return this.tileClientPos(q.x, q.y); },
   tileClientPos(x, y) { const r = canvas.getBoundingClientRect(); return { x: r.left + (x + 0.5) * r.width / W, y: r.top + (y + 0.5) * r.height / H }; },
 };
 

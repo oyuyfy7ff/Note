@@ -125,3 +125,40 @@ All tap targets ≥ 40px tall at 667×375. Compact fonts (12–14px) like RimWor
 - Day/night, storyteller events (none in first 2 days): raid, manhunter boar, storm, trader drop gift,
   wanderer joins. Each shows a RimWorld-style letter + alert + log entry.
 - Speed: pause / 1× / 2× / 3×. Autosave to localStorage (try/catch everywhere) + "เกมใหม่" in เมนู.
+
+## v2.1 addendum (bug-fix + realism round) — overrides earlier sections where they conflict
+
+### Art API additions / changes
+```
+Art.drawColonist(ctx, c, px, py, size, time)
+    // c gains:
+    //   work:  null | 'mine' | 'chop' | 'build' | 'sow' | 'harvest' | 'cook' | 'doctor'   (used when state === 'work')
+    //          mine = pickaxe, chop = axe, build/decon = hammer, sow = crouch + hand scattering seeds,
+    //          harvest = crouch + sickle/hands, cook = stirring at fire, doctor = kneeling + hands/bandage
+    //   aim:   'N' | 'E' | 'S' | 'W'  — direction of the work/shoot target. N = tool swings upward (back-ish
+    //          view acceptable), S = downward swing, E/W = existing side swing (dir still flips the sprite).
+    //   carryPawn: null | look (0..7) — colonist is carrying a downed colonist over the shoulder (rescue).
+    //   state may also be 'melee' (colonist punching/clubbing an adjacent enemy).
+Art.drawEnemy(...)                 // enemies get a crisp red/hostile outline or rim so they read at night.
+Art.drawDesignation(ctx, kind, px, py, size)
+    // must be SMALL (≈ 40% tile, in the tile's top-right corner) and semi-transparent so it never hides
+    // the target or a worker. kinds add: 'hunt' (future), keep chop/mine/harvest/deconstruct.
+Art.drawSky(ctx, w, h, phase, weather, time, lights)
+    // lights: array of { x, y, r } in screen CSS px (r = radius px). At night/storm, darkness is cut away
+    // around each light with a warm glow (campfire r ≈ 5 tiles, torch r ≈ 4 tiles). Must stay cheap
+    // (≤ ~20 lights): e.g. draw darkness on a cached offscreen canvas and use destination-out radial gradients.
+Art.icon(name)                     // new names: 'erase', 'rescue', 'medicine', 'tutorial', 'focus'
+```
+Night must stay readable: lighter overall night (keep mood, but units visible at ≥ 60% contrast).
+
+### CSS additions
+```
+.hint-chip[.is-visible] > span + .btn      // small tool hint chip (replaces big inspect panel while a tool is active), top-centre under the colonist bar; pointer-events only on its button
+.tutorial[.is-visible] > .tutorial-text + .btn   // dismissable onboarding tip card, top-centre, small; never covers the bottom-left or tabs
+.letter .letter-actions                     // row of buttons in a letter (e.g. "ไปดู" + "รับทราบ")
+```
+The inspect panel must be compact (max ~32% width, ~45% height) and must not block map gestures outside itself.
+
+### Gameplay (code agent)
+Bug fixes: colonists work from an ADJACENT tile for chop/mine/build-blocking/cook (on-tile only for sow/harvestCrop/bed&torch builds, and those use non-pickaxe poses); prefer E/W stand tiles; pass `work` + `aim`; render order so next-row mountain caps/objects don't hide units working above them; designations drawn under units; cook re-validates campfire every tick; haul destination check unified + back-off; downed colonists don't starve (drain paused) and enemies never attack downed colonists; projectiles don't hit downed/out-of-sight targets; placeItem never spreads into impassable/blueprint tiles; blueprint placement on plants auto-designates cutting (instead of skipping); boars use orthogonal adjacency; per-raid morale counter; strip render-only fields from saves; floats/particles advance in real time; priority cycle 3→2→1→off→4; drafted move = tap on empty ground only when it isn't an item/building (else select), and long-press anywhere = move; tool hint becomes .hint-chip; colonists never hidden under the top bar (camera margin).
+New features: rescue (colonist with doctor/haul carries downed colonist to bed), doctor job (tend: faster healing), feeding patients; melee self-defence when cornered/adjacent; flee toward an enclosed room with a door, else away; manhunters/raiders give up after a time; storyteller pacing (raid cooldown ≥ 2 days, size from colony wealth + day, first raid ≥ day 4); light sources (campfire, torch) passed to drawSky + small work-speed penalty in darkness without light; unified ERASE tool (architect + orders) that cancels blueprints/designations, deconstructs buildings and removes zones in the dragged rect; onboarding tutorial tips (beds → grow zone → stockpile → chop/mine → walls/door → turret → draft), dismissable and remembered; letters/alerts get "ไปดู" to jump the camera.

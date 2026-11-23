@@ -2,197 +2,71 @@
 <html lang="th">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1b2420">
 <title>Mini Colony</title>
-<style>
-  :root{--bg:#1b2420;--panel:#26332d;--ink:#e8f0ea;--mute:#93a79b;--acc:#f2c14e;--bad:#e5645a;--good:#6fcf97}
-  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,"Noto Sans Thai",sans-serif;touch-action:manipulation}
-  #app{max-width:480px;margin:0 auto;padding:8px 12px 16px}
-  .bar{display:flex;justify-content:space-between;gap:6px;background:var(--panel);border-radius:10px;padding:8px 10px;font-size:15px}
-  .bar b{font-variant-numeric:tabular-nums}
-  canvas{display:block;width:100%;margin:8px 0;border-radius:10px;background:#3d5a40}
-  .row{display:flex;gap:6px;margin:6px 0}
-  .row .lbl{font-size:12px;color:var(--mute);align-self:center;min-width:52px}
-  button{flex:1;border:0;border-radius:10px;background:var(--panel);color:var(--ink);padding:10px 4px;font-size:14px;min-height:44px}
-  button.on{background:var(--acc);color:#222;font-weight:700}
-  button:disabled{opacity:.4}
-  #log{background:var(--panel);border-radius:10px;padding:8px 10px;font-size:13px;line-height:1.5;height:110px;overflow:auto}
-  #log div:first-child{color:var(--acc)}
-  #over{display:none;text-align:center;padding:12px;background:var(--bad);color:#fff;border-radius:10px;margin:6px 0}
-  #mood{height:6px;background:#0003;border-radius:3px;margin-top:6px;overflow:hidden}
-  #moodf{height:100%;width:50%;background:var(--good)}
-</style>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div id="app">
-  <div class="bar">
-    <span>วัน <b id="day">1</b></span>
-    <span>🍓<b id="food">0</b></span>
-    <span>🪵<b id="wood">0</b></span>
-    <span>🪨<b id="stone">0</b></span>
-    <span>👥<b id="pop">0</b></span>
+<div class="app">
+  <div class="hud">
+    <div class="stat" title="วัน"><img class="stat-icon" data-icon="day" alt="วัน"><span class="stat-value" id="v-day">1</span></div>
+    <div class="stat" title="อาหาร"><img class="stat-icon" data-icon="food" alt="อาหาร"><span class="stat-value" id="v-food">0</span></div>
+    <div class="stat" title="ไม้"><img class="stat-icon" data-icon="wood" alt="ไม้"><span class="stat-value" id="v-wood">0</span></div>
+    <div class="stat" title="หิน"><img class="stat-icon" data-icon="stone" alt="หิน"><span class="stat-value" id="v-stone">0</span></div>
+    <div class="stat" title="ประชากร"><img class="stat-icon" data-icon="pop" alt="ประชากร"><span class="stat-value" id="v-pop">0/0</span></div>
+    <div class="stat" title="ขวัญกำลังใจ"><img class="stat-icon" data-icon="morale" alt="ขวัญ"><span class="stat-value" id="v-morale">50</span></div>
   </div>
-  <div id="mood"><div id="moodf"></div></div>
-  <canvas id="c"></canvas>
-  <div class="row"><span class="lbl">งานเร่งด่วน<br>(แตะเพื่อเลื่อนขึ้น)</span><span id="prio" style="display:contents"></span></div>
-  <div class="row"><span class="lbl">สร้าง</span>
-    <button id="bHut">🏠 บ้าน<br><small>ไม้ 10</small></button>
-    <button id="bTower">🗼 หอคอย<br><small>ไม้ 4 หิน 12</small></button>
-    <button id="bSpeed">⏩ x1</button>
+  <div class="morale"><div class="morale-fill" id="morale-fill" data-level="mid" style="width:50%"></div></div>
+
+  <div class="stage">
+    <canvas id="board"></canvas>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </div>
-  <div id="over">อาณานิคมล่มสลายแล้ว <button id="again" style="margin-top:8px;flex:none;width:100%">เริ่มใหม่</button></div>
-  <div id="log"></div>
+
+  <div class="panel-label">ลำดับงาน (แตะเพื่อเลื่อนขึ้นเป็นอันดับแรก)</div>
+  <div class="panel" id="prio-panel"></div>
+
+  <div class="panel-label">สร้าง (แตะปุ่ม แล้วแตะช่องบนแผนที่ แตะซ้ำเพื่อวาง)</div>
+  <div class="panel" id="build-panel">
+    <button class="btn" data-build="hut"><img class="btn-icon" data-icon="hut" alt=""><span class="btn-text">บ้าน</span><span class="btn-cost">ไม้ 10</span></button>
+    <button class="btn" data-build="tower"><img class="btn-icon" data-icon="tower" alt=""><span class="btn-text">หอคอย</span><span class="btn-cost">ไม้ 4 หิน 12</span></button>
+    <button class="btn" data-build="farm"><img class="btn-icon" data-icon="farm" alt=""><span class="btn-text">ฟาร์ม</span><span class="btn-cost">ไม้ 6</span></button>
+  </div>
+
+  <div class="panel" id="speed-panel">
+    <button class="btn" data-speed="0" id="btn-pause"><img class="btn-icon" data-icon="pause" alt=""><span class="btn-text">หยุด</span></button>
+    <button class="btn" data-speed="1"><img class="btn-icon" data-icon="speed" alt=""><span class="btn-text">x1</span></button>
+    <button class="btn" data-speed="2"><img class="btn-icon" data-icon="speed" alt=""><span class="btn-text">x2</span></button>
+    <button class="btn" data-speed="3"><img class="btn-icon" data-icon="speed" alt=""><span class="btn-text">x3</span></button>
+    <button class="btn" id="btn-new"><span class="btn-text">เกมใหม่</span></button>
+  </div>
+
+  <div class="panel-label">บันทึกเหตุการณ์</div>
+  <div class="log" id="log"></div>
 </div>
-<script>
-const W=12,H=14;
-const cv=document.getElementById('c'),ctx=cv.getContext('2d');
-let T,dpr=Math.min(window.devicePixelRatio||1,2);
-function fit(){const w=Math.min(window.innerWidth-24,456);T=Math.floor(w/W);const cw=T*W,ch=T*H;
-  cv.style.width=cw+'px';cv.style.height=ch+'px';cv.width=cw*dpr;cv.height=ch*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);}
-window.addEventListener('resize',()=>{fit();draw()});
 
-const RES={bush:{r:'food',n:4,e:'🍓'},tree:{r:'wood',n:3,e:'🪵'},rock:{r:'stone',n:3,e:'🪨'}};
-const EMO={bush:'🍓',tree:'🌳',rock:'🪨',hut:'🏠',tower:'🗼'};
-const LABEL={food:'🍓 อาหาร',wood:'🪵 ไม้',stone:'🪨 หิน'};
-let S;
-function rnd(a,b){return a+Math.floor(Math.random()*(b-a+1))}
-function newGame(){
-  const map=[];
-  for(let y=0;y<H;y++){map.push([]);for(let x=0;x<W;x++){
-    const r=Math.random();let t='grass';
-    if(r<.12)t='tree';else if(r<.2)t='rock';else if(r<.28)t='bush';
-    map[y].push(t);}}
-  const cx=W>>1,cy=H>>1;
-  for(let y=cy-2;y<=cy+1;y++)for(let x=cx-2;x<=cx+1;x++)map[y][x]='grass';
-  const traits=[['มะลิ','ขยัน'],['ต้น','ขี้เกียจ'],['ฟ้า','ปกติ'],['บอย','ปกติ']];
-  S={map,tick:0,res:{food:12,wood:6,stone:0},prio:['food','wood','stone'],build:null,speed:1,over:false,
-    pen:0,next:rnd(40,70),log:[],
-    col:traits.map((t,i)=>({name:t[0],trait:t[1],x:cx-1+(i%2),y:cy-1+(i>>1),hp:3,work:0,target:null}))};
-  addLog('ยานตกแล้ว! รอดมา 4 คน เริ่มสร้างอาณานิคมกันเถอะ');
-  renderUI();
-}
-function addLog(m){S.log.unshift(m);S.log.length=Math.min(S.log.length,30);
-  document.getElementById('log').innerHTML=S.log.map(l=>'<div>'+l+'</div>').join('')}
-function alive(){return S.col.filter(c=>c.hp>0)}
-function count(t){let n=0;for(const r of S.map)for(const c of r)if(c===t)n++;return n}
-function morale(){const hungry=S.res.food<=0?alive().length:0;
-  return Math.max(0,Math.min(100,45+count('hut')*7-hungry*6-S.pen))}
+<div class="overlay" id="info-overlay">
+  <div class="overlay-card">
+    <h2 id="info-name">-</h2>
+    <div class="info-row"><span>นิสัย</span><span id="info-trait">-</span></div>
+    <p id="info-trait-desc"></p>
+    <div class="info-row"><span>พลังชีวิต</span><span id="info-hp">-</span></div>
+    <div class="info-row"><span>งานตอนนี้</span><span id="info-job">-</span></div>
+    <div class="info-row"><span>ถือของ</span><span id="info-carry">-</span></div>
+    <button class="btn" id="info-close"><span class="btn-text">ปิด</span></button>
+  </div>
+</div>
 
-function nearest(c,type){let best=null,bd=1e9;
-  for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(S.map[y][x]===type){
-    const d=Math.abs(x-c.x)+Math.abs(y-c.y);if(d<bd){bd=d;best={x,y}}}
-  return best}
-function pickTarget(c){
-  for(const k of S.prio){
-    const type=Object.keys(RES).find(t=>RES[t].r===k);
-    const n=nearest(c,type);if(n)return n}
-  return null}
-function step(c){
-  const dx=c.target.x-c.x,dy=c.target.y-c.y;
-  if(Math.abs(dx)>=Math.abs(dy)&&dx!==0)c.x+=Math.sign(dx);else if(dy!==0)c.y+=Math.sign(dy);}
+<div class="overlay" id="over-overlay">
+  <div class="overlay-card">
+    <h2>อาณานิคมล่มสลาย</h2>
+    <p id="over-text"></p>
+    <button class="btn" id="over-restart"><span class="btn-text">เริ่มใหม่</span></button>
+  </div>
+</div>
 
-function tick(){
-  if(S.over)return;
-  S.tick++;
-  const m=morale();
-  for(const c of alive()){
-    let skip=0;
-    if(c.trait==='ขี้เกียจ')skip+=.4;
-    if(m<30)skip+=.4;
-    if(Math.random()<skip)continue;
-    if(c.work>0){c.work--;
-      if(c.work===0&&c.target){const t=S.map[c.target.y][c.target.x];
-        if(RES[t]){S.res[RES[t].r]+=RES[t].n+(c.trait==='ขยัน'?1:0);S.map[c.target.y][c.target.x]='grass'}
-        c.target=null}
-      continue}
-    if(!c.target||!RES[S.map[c.target.y][c.target.x]])c.target=pickTarget(c);
-    if(!c.target){const d=[[1,0],[-1,0],[0,1],[0,-1]][rnd(0,3)];
-      const nx=c.x+d[0],ny=c.y+d[1];if(nx>=0&&ny>=0&&nx<W&&ny<H){c.x=nx;c.y=ny}continue}
-    if(c.x===c.target.x&&c.y===c.target.y)c.work=c.trait==='ขยัน'?2:3;
-    else step(c)}
-  if(Math.random()<.05)regrow();
-  if(S.tick%15===0)eat();
-  if(S.tick%100===0)newDay();
-  if(S.tick>=S.next)event();
-  S.pen=Math.max(0,S.pen-.1);
-  if(!alive().length){S.over=true;addLog('💀 ทุกคนตายหมดแล้ว')}
-  renderUI();draw()}
-function regrow(){const empties=[];
-  for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(S.map[y][x]==='grass'&&!S.col.some(c=>c.hp>0&&c.x===x&&c.y===y))empties.push([x,y]);
-  if(!empties.length)return;const [x,y]=empties[rnd(0,empties.length-1)];
-  S.map[y][x]=['tree','rock','bush','bush'][rnd(0,3)]}
-function eat(){for(const c of alive()){
-  if(S.res.food>0)S.res.food--;
-  else{c.hp--;S.pen+=2;if(c.hp<=0)addLog('😢 '+c.name+' อดตาย')}}}
-function newDay(){
-  const day=Math.floor(S.tick/100)+1;
-  for(const c of alive())if(c.hp<3&&S.res.food>0)c.hp++;
-  const huts=count('hut'),a=alive().length;
-  if(morale()>=55&&S.res.food>=8&&a<huts*2+4){
-    const n=['น้ำ','ไผ่','ข้าว','เมฆ','ฝน','ดาว'][rnd(0,5)];
-    S.col.push({name:n,trait:['ขยัน','ปกติ','ขี้เกียจ'][rnd(0,2)],x:W>>1,y:H>>1,hp:3,work:0,target:null});
-    addLog('🧑 '+n+' เดินทางมาร่วมอาณานิคม')}
-  addLog('☀️ เริ่มวันที่ '+day)}
-function event(){
-  const day=Math.floor(S.tick/100)+1;
-  S.next=S.tick+rnd(50,90);
-  const r=Math.random();
-  if(r<.4){ // raid
-    const str=2+Math.floor(day*.8)+rnd(0,2);
-    const def=count('tower')*3+alive().length*.5;
-    addLog('⚔️ โจรบุก! (พลัง '+str+' / ป้องกัน '+def.toFixed(1)+')');
-    if(def>=str)addLog('🛡️ ป้องกันสำเร็จ');
-    else{S.res.wood=Math.floor(S.res.wood/2);S.res.stone=Math.floor(S.res.stone/2);S.res.food=Math.floor(S.res.food/2);
-      S.pen+=15;const v=alive();const c=v[rnd(0,v.length-1)];c.hp-=2;
-      addLog('💥 ถูกปล้นของไปครึ่งหนึ่ง '+c.name+' บาดเจ็บ');if(c.hp<=0)addLog('😢 '+c.name+' ตายจากการต่อสู้')}}
-  else if(r<.6){const l=Math.min(S.res.food,rnd(3,6));S.res.food-=l;S.pen+=5;addLog('🐗 สัตว์ป่าขโมยอาหาร '+l)}
-  else if(r<.8){S.pen+=8;const l=Math.min(S.res.wood,3);S.res.wood-=l;addLog('⛈️ พายุพัดถล่ม เสียไม้ '+l+' ขวัญเสีย')}
-  else{const g=rnd(4,8);S.res.food+=g;S.res.wood+=g>>1;S.pen=Math.max(0,S.pen-10);addLog('🎁 พ่อค้าผ่านมาแจกของ อาหาร +'+g)}}
-
-function renderUI(){
-  document.getElementById('day').textContent=Math.floor(S.tick/100)+1;
-  for(const k of ['food','wood','stone'])document.getElementById(k).textContent=S.res[k];
-  document.getElementById('pop').textContent=alive().length;
-  const m=morale(),f=document.getElementById('moodf');
-  f.style.width=m+'%';f.style.background=m<30?'var(--bad)':m<55?'var(--acc)':'var(--good)';
-  document.getElementById('prio').innerHTML=S.prio.map((k,i)=>'<button data-k="'+k+'" class="'+(i===0?'on':'')+'">'+LABEL[k]+'</button>').join('');
-  document.getElementById('bHut').disabled=S.res.wood<10;
-  document.getElementById('bTower').disabled=S.res.wood<4||S.res.stone<12;
-  document.getElementById('bHut').classList.toggle('on',S.build==='hut');
-  document.getElementById('bTower').classList.toggle('on',S.build==='tower');
-  document.getElementById('over').style.display=S.over?'block':'none'}
-
-function draw(){
-  ctx.clearRect(0,0,T*W,T*H);
-  ctx.textAlign='center';ctx.textBaseline='middle';
-  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
-    ctx.fillStyle=(x+y)%2?'#3d5a40':'#42614a';ctx.fillRect(x*T,y*T,T,T);
-    const t=S.map[y][x];
-    if(EMO[t]){ctx.font=(T*.7)+'px serif';ctx.fillText(EMO[t],x*T+T/2,y*T+T/2+1)}}
-  for(const c of S.col){if(c.hp<=0)continue;
-    ctx.font=(T*.65)+'px serif';ctx.fillText(c.work>0?'⛏️':'🧑',c.x*T+T/2,c.y*T+T/2);
-    ctx.font='bold '+Math.max(9,T*.28)+'px sans-serif';ctx.fillStyle='#fff';
-    ctx.fillText(c.name+(c.hp<3?' ❤'+c.hp:''),c.x*T+T/2,c.y*T+T-3)}
-  if(S.build){ctx.fillStyle='#f2c14e33';for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(S.map[y][x]==='grass')ctx.fillRect(x*T,y*T,T,T)}}
-
-cv.addEventListener('pointerdown',e=>{
-  if(!S.build||S.over)return;
-  const r=cv.getBoundingClientRect(),x=Math.floor((e.clientX-r.left)/r.width*W),y=Math.floor((e.clientY-r.top)/r.height*H);
-  if(S.map[y]?.[x]!=='grass')return;
-  if(S.build==='hut'&&S.res.wood>=10){S.res.wood-=10;S.map[y][x]='hut';addLog('🏠 สร้างบ้านแล้ว ขวัญดีขึ้น')}
-  else if(S.build==='tower'&&S.res.wood>=4&&S.res.stone>=12){S.res.wood-=4;S.res.stone-=12;S.map[y][x]='tower';addLog('🗼 สร้างหอคอยแล้ว')}
-  S.build=null;renderUI();draw()});
-document.getElementById('prio').addEventListener('click',e=>{
-  const k=e.target.closest('button')?.dataset.k;if(!k)return;
-  S.prio=[k,...S.prio.filter(p=>p!==k)];
-  for(const c of S.col)c.target=null;renderUI()});
-document.getElementById('bHut').onclick=()=>{S.build=S.build==='hut'?null:'hut';renderUI();draw()};
-document.getElementById('bTower').onclick=()=>{S.build=S.build==='tower'?null:'tower';renderUI();draw()};
-document.getElementById('bSpeed').onclick=e=>{S.speed=S.speed===1?2:1;e.target.textContent='⏩ x'+S.speed;loop()};
-document.getElementById('again').onclick=()=>{newGame();draw()};
-let timer;function loop(){clearInterval(timer);timer=setInterval(tick,500/S.speed)}
-fit();newGame();draw();loop();
-</script>
+<script src="art.js"></script>
+<script src="game.js"></script>
 </body>
 </html>

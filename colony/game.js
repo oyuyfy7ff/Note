@@ -739,7 +739,7 @@ function updateColonist(c) {
   const drain = c.trait === 'ตะกละ' ? 1.6 : 1;
   c.food = Math.max(0, c.food - drain * (c.downed ? 0.4 : 1) / (DAY * 0.8));
   if (c.state === 'sleep') c.rest = Math.min(1, c.rest + (c.ground ? 0.75 : 1) / (DAY * 0.3));
-  else c.rest = Math.max(0, c.rest - 1 / (DAY * 0.75));
+  else c.rest = Math.max(0, c.rest - 1 / (DAY * 1.0));
   if (c.food <= 0 && S.tick % 60 === 0) {
     hurtColonist(c, 1, 'อดอาหาร', true);
     if (S.starveDay !== S.day) { S.starveDay = S.day; addLog(c.name + ' กำลังอดอาหาร!', 'bad', 'food'); }

@@ -2,68 +2,84 @@
 <html lang="th">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#1b2420">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#1b1610">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <title>Mini Colony</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="app">
-  <div class="hud">
-    <div class="stat" title="วัน"><img class="stat-icon" data-icon="day" alt="วัน"><span class="stat-value" id="v-day">1</span></div>
-    <div class="stat" title="อาหาร"><img class="stat-icon" data-icon="food" alt="อาหาร"><span class="stat-value" id="v-food">0</span></div>
-    <div class="stat" title="ไม้"><img class="stat-icon" data-icon="wood" alt="ไม้"><span class="stat-value" id="v-wood">0</span></div>
-    <div class="stat" title="หิน"><img class="stat-icon" data-icon="stone" alt="หิน"><span class="stat-value" id="v-stone">0</span></div>
-    <div class="stat" title="ประชากร"><img class="stat-icon" data-icon="pop" alt="ประชากร"><span class="stat-value" id="v-pop">0/0</span></div>
-    <div class="stat" title="ขวัญกำลังใจ"><img class="stat-icon" data-icon="morale" alt="ขวัญ"><span class="stat-value" id="v-morale">50</span></div>
-  </div>
-  <div class="morale"><div class="morale-fill" id="morale-fill" data-level="mid" style="width:50%"></div></div>
+<div class="game" id="game">
+  <canvas class="world" id="world"></canvas>
 
-  <div class="stage">
-    <canvas id="board"></canvas>
-    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="resources" id="resources"></div>
+  <div class="colonist-bar" id="colonist-bar"></div>
+  <div class="clock" id="clock">วันที่ 1</div>
+  <div class="speed" id="speed">
+    <button class="btn-speed" data-speed="0" aria-label="หยุด"><img data-icon="pause" alt=""></button>
+    <button class="btn-speed" data-speed="1" aria-label="ปกติ"><img data-icon="play" alt=""></button>
+    <button class="btn-speed" data-speed="2" aria-label="เร็ว"><img data-icon="fast" alt=""></button>
+    <button class="btn-speed" data-speed="3" aria-label="เร็วมาก"><img data-icon="faster" alt=""></button>
   </div>
 
-  <div class="panel-label">ลำดับงาน (แตะเพื่อเลื่อนขึ้นเป็นอันดับแรก)</div>
-  <div class="panel" id="prio-panel"></div>
+  <div class="alerts" id="alerts"></div>
 
-  <div class="panel-label">สร้าง (แตะปุ่ม แล้วแตะช่องบนแผนที่ แตะซ้ำเพื่อวาง)</div>
-  <div class="panel" id="build-panel">
-    <button class="btn" data-build="hut"><img class="btn-icon" data-icon="hut" alt=""><span class="btn-text">บ้าน</span><span class="btn-cost">ไม้ 10</span></button>
-    <button class="btn" data-build="tower"><img class="btn-icon" data-icon="tower" alt=""><span class="btn-text">หอคอย</span><span class="btn-cost">ไม้ 4 หิน 12</span></button>
-    <button class="btn" data-build="farm"><img class="btn-icon" data-icon="farm" alt=""><span class="btn-text">ฟาร์ม</span><span class="btn-cost">ไม้ 6</span></button>
+  <div class="inspect" id="inspect">
+    <div class="inspect-title" id="inspect-title"></div>
+    <div class="inspect-body" id="inspect-body"></div>
+    <div class="inspect-actions" id="inspect-actions"></div>
   </div>
 
-  <div class="panel" id="speed-panel">
-    <button class="btn" data-speed="0" id="btn-pause"><img class="btn-icon" data-icon="pause" alt=""><span class="btn-text">หยุด</span></button>
-    <button class="btn" data-speed="1"><img class="btn-icon" data-icon="speed" alt=""><span class="btn-text">x1</span></button>
-    <button class="btn" data-speed="2"><img class="btn-icon" data-icon="speed" alt=""><span class="btn-text">x2</span></button>
-    <button class="btn" data-speed="3"><img class="btn-icon" data-icon="speed" alt=""><span class="btn-text">x3</span></button>
-    <button class="btn" id="btn-new"><span class="btn-text">เกมใหม่</span></button>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <div class="tab-panel" id="panel-architect" data-tab="architect">
+    <div class="panel-title">สถาปนิก — แตะเครื่องมือ แล้วแตะ/ลากบนแผนที่</div>
+    <div class="panel-grid" data-group="architect"></div>
+  </div>
+  <div class="tab-panel" id="panel-work" data-tab="work">
+    <div class="panel-title">งาน — แตะช่องเพื่อเปลี่ยนลำดับ (1 = ทำก่อน, ว่าง = ไม่ทำ)</div>
+    <table class="work-table" id="work-table"></table>
+  </div>
+  <div class="tab-panel" id="panel-orders" data-tab="orders">
+    <div class="panel-title">คำสั่ง — ลากกรอบบนแผนที่</div>
+    <div class="panel-grid" data-group="orders"></div>
+  </div>
+  <div class="tab-panel" id="panel-zones" data-tab="zones">
+    <div class="panel-title">โซน — ลากกรอบบนแผนที่</div>
+    <div class="panel-grid" data-group="zones"></div>
+  </div>
+  <div class="tab-panel" id="panel-info" data-tab="info">
+    <div class="panel-title" id="info-title">ข้อมูลอาณานิคม</div>
+    <div class="log" id="log"></div>
+  </div>
+  <div class="tab-panel" id="panel-menu" data-tab="menu">
+    <div class="panel-title">เมนู</div>
+    <div class="panel-grid">
+      <button class="btn" id="btn-save">บันทึกเกม</button>
+      <button class="btn" id="btn-center">กล้องไปที่อาณานิคม</button>
+      <button class="btn" id="btn-new">เกมใหม่</button>
+    </div>
   </div>
 
-  <div class="panel-label">บันทึกเหตุการณ์</div>
-  <div class="log" id="log"></div>
-</div>
-
-<div class="overlay" id="info-overlay">
-  <div class="overlay-card">
-    <h2 id="info-name">-</h2>
-    <div class="info-row"><span>นิสัย</span><span id="info-trait">-</span></div>
-    <p id="info-trait-desc"></p>
-    <div class="info-row"><span>พลังชีวิต</span><span id="info-hp">-</span></div>
-    <div class="info-row"><span>งานตอนนี้</span><span id="info-job">-</span></div>
-    <div class="info-row"><span>ถือของ</span><span id="info-carry">-</span></div>
-    <button class="btn" id="info-close"><span class="btn-text">ปิด</span></button>
+  <div class="tabs" id="tabs">
+    <button class="tab" data-tab="architect"><img data-icon="architect" alt=""><span>สถาปนิก</span></button>
+    <button class="tab" data-tab="work"><img data-icon="work" alt=""><span>งาน</span></button>
+    <button class="tab" data-tab="orders"><img data-icon="orders" alt=""><span>คำสั่ง</span></button>
+    <button class="tab" data-tab="zones"><img data-icon="zones" alt=""><span>โซน</span></button>
+    <button class="tab" data-tab="info"><img data-icon="info" alt=""><span>ข้อมูล</span></button>
+    <button class="tab" data-tab="menu"><img data-icon="menu" alt=""><span>เมนู</span></button>
   </div>
-</div>
 
-<div class="overlay" id="over-overlay">
-  <div class="overlay-card">
-    <h2>อาณานิคมล่มสลาย</h2>
-    <p id="over-text"></p>
-    <button class="btn" id="over-restart"><span class="btn-text">เริ่มใหม่</span></button>
+  <div class="letter-overlay" id="letter-overlay">
+    <div class="letter">
+      <h3 id="letter-title"></h3>
+      <p id="letter-body"></p>
+      <button class="btn" id="letter-ok">รับทราบ</button>
+    </div>
   </div>
+
+  <div class="rotate-hint">กรุณาหมุนจอเป็นแนวนอน</div>
 </div>
 
 <script src="art.js"></script>

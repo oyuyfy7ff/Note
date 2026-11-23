@@ -2207,6 +2207,32 @@ $('letter-ok').addEventListener('click', () => {
   closeLetter();
 });
 $('btn-save').addEventListener('click', () => { saveGame(); toast('บันทึกเกมแล้ว'); });
+// Fullscreen: explicit button in the menu, plus one automatic attempt on the first touch.
+function goFullscreen(quiet) {
+  const d = document, root = d.documentElement;
+  if (d.fullscreenElement || d.webkitFullscreenElement) {
+    try { (d.exitFullscreen || d.webkitExitFullscreen).call(d); } catch (e) { /* ignore */ }
+    return;
+  }
+  const req = root.requestFullscreen || root.webkitRequestFullscreen;
+  const fail = () => { if (!quiet) toast('เบราว์เซอร์นี้ไม่อนุญาตให้เต็มจอ'); };
+  if (!req) { fail(); return; }
+  try {
+    const p = req.call(root, { navigationUI: 'hide' });
+    const lock = () => { try { const o = screen.orientation; if (o && o.lock) o.lock('landscape').catch(() => {}); } catch (e) { /* ignore */ } };
+    if (p && p.then) p.then(lock, fail); else lock();
+  } catch (e) { fail(); }
+}
+$('btn-full').addEventListener('click', () => { goFullscreen(false); closeTabs(); });
+let triedAutoFull = false;
+canvas.addEventListener('pointerup', () => {
+  if (triedAutoFull || matchMedia('(pointer: fine)').matches) return;
+  triedAutoFull = true;
+  goFullscreen(true);
+});
+const onFsChange = () => setTimeout(fit, 120);
+document.addEventListener('fullscreenchange', onFsChange);
+document.addEventListener('webkitfullscreenchange', onFsChange);
 $('btn-center').addEventListener('click', () => { const c = colonyCenter(); centerOn(c.x, c.y); closeTabs(); });
 el.newBtn.addEventListener('click', () => {
   const now = performance.now();

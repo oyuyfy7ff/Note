@@ -303,9 +303,9 @@ function lerpPos(e, rt) {
 // ============================================================
 // 8. Colonist AI
 // ============================================================
-const moveLen = (c) => (c.trait === 'ขี้เกียจ' ? 3 : 2);
+const moveLen = (c) => (c.trait === 'ขี้เกียจ' ? 4 : 3);
 function workTicks(c) {
-  const base = c.trait === 'ขยัน' ? 4 : c.trait === 'ขี้เกียจ' ? 9 : 6;
+  const base = c.trait === 'ขยัน' ? 7 : c.trait === 'ขี้เกียจ' ? 14 : 10;
   return Math.ceil(base * (S.morale < 30 ? 1.5 : 1));
 }
 function buildRate(c) {
@@ -411,7 +411,7 @@ function act(c, j) {
       if (j.work >= workTicks(c)) {
         const res = RES_FOR[t.o];
         c.carrying = res;
-        c.carryAmt = 3 + (c.trait === 'ขยัน' ? 1 : 0);
+        c.carryAmt = 2 + (c.trait === 'ขยัน' ? 1 : 0);
         if (t.o === 'bush') { t.o = 'bush_empty'; t.t = BUSH_REGROW + rnd(0, 80); }
         else { S.respawn.push({ type: t.o, at: S.tick + rnd(120, 320) }); t.o = null; }
         c.job = null;
@@ -488,7 +488,7 @@ function hurtColonist(c, dmg, cause) {
 // 9. Enemies (raiders & boars) and towers
 // ============================================================
 function spawnEnemy(kind, x, y) {
-  const hp = kind === 'raider' ? 6 + S.day : 6;
+  const hp = kind === 'raider' ? 6 + Math.floor(S.day * 0.75) : 6;
   const e = { id: S.nextId++, kind, x, y, fx: x, fy: y, st: S.tick, sl: 1, dir: x < W / 2 ? 1 : -1,
     hp, maxHp: hp, atkCool: 0, flee: false, angry: kind === 'raider', path: [], repathAt: 0, ghost: false };
   S.enemies.push(e);
@@ -527,7 +527,7 @@ function updateEnemy(e) {
     if (t) {
       face(e, t.x);
       if (e.atkCool <= 0) {
-        const dmg = e.kind === 'raider' ? rnd(1, 2) + Math.floor(S.day / 5) : 1;
+        const dmg = e.kind === 'raider' ? rnd(1, 2) + Math.floor(S.day / 7) : 1;
         hurtColonist(t, dmg, e.kind === 'raider' ? 'ถูกโจรทำร้าย' : 'ถูกหมูป่าขวิด');
         e.atkCool = e.kind === 'raider' ? 5 : 6;
       }
@@ -603,7 +603,7 @@ function rollEvent() {
 function fireEvent(kind) {
   switch (kind) {
     case 'raid': {
-      const n = Math.min(7, 1 + Math.floor((S.day - 1) / 3) + (Math.random() < 0.4 ? 1 : 0));
+      const n = Math.min(7, 1 + Math.floor((S.day - 1) / 4) + (Math.random() < 0.4 ? 1 : 0));
       const edge = edgeTiles();
       const start = rnd(0, Math.max(0, edge.length - n));
       for (let i = 0; i < n; i++) { const p = edge[(start + i) % edge.length]; spawnEnemy('raider', p[0], p[1]); }
@@ -728,7 +728,8 @@ function tick() {
   updateTowers();
   // clean up enemies
   const before = S.enemies.length;
-  for (const e of S.enemies) if (e.gone && e.kind === 'raider') addLog('โจรหนีออกไปแล้ว', 'info', 'raid');
+  const fled = S.enemies.filter(e => e.gone && e.kind === 'raider').length;
+  if (fled) addLog(fled > 1 ? 'โจร ' + fled + ' คนหนีออกไปแล้ว' : 'โจรหนีออกไปแล้ว', 'info', 'raid');
   for (const e of S.enemies) if (e.gone && e.kind === 'boar') addLog('หมูป่าวิ่งหนีไปแล้ว', 'info', 'boar');
   S.enemies = S.enemies.filter(e => e.hp > 0 && !e.gone);
   if (before && S.raid && !S.enemies.some(e => e.kind === 'raider')) {

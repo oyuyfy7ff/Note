@@ -32,6 +32,8 @@
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="hint-chip" id="hint-chip"><span></span><button class="btn">เลิกใช้</button></div>
+  <div class="tutorial" id="tutorial"><div class="tutorial-text"></div><button class="btn">ข้าม</button></div>
 
   <div class="tab-panel" id="panel-architect" data-tab="architect">
     <div class="panel-title">สถาปนิก — แตะเครื่องมือ แล้วแตะ/ลากบนแผนที่</div>
@@ -59,6 +61,7 @@
       <button class="btn" id="btn-full">เต็มจอ</button>
       <button class="btn" id="btn-save">บันทึกเกม</button>
       <button class="btn" id="btn-center">กล้องไปที่อาณานิคม</button>
+      <button class="btn" id="btn-tut">คำแนะนำ เปิด/ปิด</button>
       <button class="btn" id="btn-new">เกมใหม่</button>
     </div>
   </div>
@@ -76,7 +79,10 @@
     <div class="letter">
       <h3 id="letter-title"></h3>
       <p id="letter-body"></p>
-      <button class="btn" id="letter-ok">รับทราบ</button>
+      <div class="letter-actions">
+        <button class="btn" id="letter-go">ไปดู</button>
+        <button class="btn" id="letter-ok">รับทราบ</button>
+      </div>
     </div>
   </div>
 

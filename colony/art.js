@@ -812,39 +812,80 @@
       }
     }
   }
-  function headAt(g, L, cx, cy, r, mood, blink, look) {
-    if (L.style === 1) { rr(g, cx - r - 0.6, cy - 2, r * 1.15, r + 4.5, 3); fs(g, L.hair); }
+  // view: 'side' (facing right) | 'front' (facing viewer, aim S) | 'back' (facing away, aim N)
+  function headAt(g, L, cx, cy, r, mood, blink, look, view) {
+    view = view || 'side';
+    if (L.style === 1) {
+      if (view === 'side') { rr(g, cx - r - 0.6, cy - 2, r * 1.15, r + 4.5, 3); fs(g, L.hair); }
+      else if (view === 'front') { rr(g, cx - r - 0.8, cy - 2, r * 2 + 1.6, r + 3.5, 3); fs(g, L.hair); }
+    }
     circ(g, cx, cy, r); fs(g, L.skin);
     if (L.style === 'hood') {
+      if (view === 'back') { circ(g, cx, cy, r + 0.9); fs(g, L.hood); return; }
       g.beginPath();
-      g.arc(cx, cy, r + 0.9, -1.2, 1.35, true);
-      g.quadraticCurveTo(cx - 1.5, cy + 0.5, cx + 2.6, cy - r - 0.2);
+      if (view === 'front') {
+        g.arc(cx, cy, r + 0.9, Math.PI * 0.15, Math.PI * 0.85, true);
+        g.quadraticCurveTo(cx - r * 0.6, cy - r * 0.6, cx, cy - r * 0.62);
+        g.quadraticCurveTo(cx + r * 0.6, cy - r * 0.6, cx + (r + 0.9) * Math.cos(0.15 * Math.PI), cy + (r + 0.9) * Math.sin(0.15 * Math.PI));
+      } else {
+        g.arc(cx, cy, r + 0.9, -1.2, 1.35, true);
+        g.quadraticCurveTo(cx - 1.5, cy + 0.5, cx + 2.6, cy - r - 0.2);
+      }
       g.closePath(); fs(g, L.hood);
       g.save(); circ(g, cx, cy, r - 0.2); g.clip();
-      g.fillStyle = L.mask; g.fillRect(cx - 1, cy + 0.6, r + 2, r);
+      g.fillStyle = L.mask;
+      if (view === 'front') g.fillRect(cx - r, cy + 0.6, r * 2, r); else g.fillRect(cx - 1, cy + 0.6, r + 2, r);
       g.restore();
-      line(g, cx - 0.6, cy + 0.6, cx + r, cy + 0.6, C.out, 0.9);
+      line(g, view === 'front' ? cx - r * 0.85 : cx - 0.6, cy + 0.6, cx + r * (view === 'front' ? 0.85 : 1), cy + 0.6, C.out, 0.9);
       circ(g, cx, cy, r); stroke(g);
-      faceMarks(g, cx, cy - 1.6, mood === 'ok' ? 'fight' : mood, false, mood === 'dead' || mood === 'sleep' ? null : '#e8d070');
+      var ex = view === 'front' ? cx - 4.2 : cx;
+      faceMarks(g, ex, cy - 1.6, mood === 'ok' ? 'fight' : mood, false, mood === 'dead' || mood === 'sleep' ? null : '#ffd860');
+      return;
+    }
+    if (view === 'back') {
+      circ(g, cx, cy, r + 0.5); fs(g, L.hair);
+      g.fillStyle = 'rgba(255,240,210,0.16)'; ell(g, cx - r * 0.25, cy - r * 0.55, r * 0.45, r * 0.22); g.fill();
+      line(g, cx, cy - r * 0.9, cx + 0.6, cy + r * 0.3, 'rgba(20,14,8,0.3)', 0.8);
+      if (L.style === 2) { circ(g, cx, cy - r * 0.35, 2.8); fs(g, L.hair); }
+      if (L.style === 3) { limb(g, cx - r, cy - r * 0.15, cx + r, cy - r * 0.15, 1.4, BAND[look & 7]); limb(g, cx, cy - r * 0.1, cx + 1.5, cy + r * 0.7, 1, BAND[look & 7]); }
+      if (L.style === 1) { rr(g, cx - r * 0.9, cy, r * 1.8, r * 0.9, 2.5); fs(g, L.hair); }
       return;
     }
     g.beginPath();
-    g.arc(cx, cy, r + 0.5, Math.PI * 0.86, Math.PI * 1.93);
-    g.lineTo(cx + r * 0.62, cy - r * 0.42);
-    g.lineTo(cx + r * 0.28, cy - r * 0.2);
-    g.lineTo(cx - r * 0.05, cy - r * 0.45);
-    g.lineTo(cx - r * 0.35, cy - r * 0.15);
-    g.lineTo(cx - r * 0.55, cy + r * 0.25);
-    g.lineTo(cx - r * 0.85, cy + r * 0.6);
+    if (view === 'front') {
+      g.arc(cx, cy, r + 0.5, Math.PI * 0.93, Math.PI * 2.07);
+      g.lineTo(cx + r * 0.62, cy - r * 0.3);
+      g.lineTo(cx + r * 0.32, cy - r * 0.5);
+      g.lineTo(cx + r * 0.05, cy - r * 0.25);
+      g.lineTo(cx - r * 0.25, cy - r * 0.5);
+      g.lineTo(cx - r * 0.55, cy - r * 0.28);
+      g.lineTo(cx - r * 0.9, cy + r * 0.2);
+    } else {
+      g.arc(cx, cy, r + 0.5, Math.PI * 0.86, Math.PI * 1.93);
+      g.lineTo(cx + r * 0.62, cy - r * 0.42);
+      g.lineTo(cx + r * 0.28, cy - r * 0.2);
+      g.lineTo(cx - r * 0.05, cy - r * 0.45);
+      g.lineTo(cx - r * 0.35, cy - r * 0.15);
+      g.lineTo(cx - r * 0.55, cy + r * 0.25);
+      g.lineTo(cx - r * 0.85, cy + r * 0.6);
+    }
     g.closePath(); fs(g, L.hair);
     g.fillStyle = 'rgba(255,240,210,0.18)'; ell(g, cx - r * 0.3, cy - r * 0.7, r * 0.35, r * 0.16); g.fill();
-    if (L.style === 2) { circ(g, cx - r * 0.55, cy - r - 0.8, 2.6); fs(g, L.hair); }
+    if (L.style === 2) { circ(g, view === 'front' ? cx : cx - r * 0.55, cy - r - 0.8, 2.6); fs(g, L.hair); }
     if (L.style === 3) {
-      limb(g, cx - r + 0.3, cy - r * 0.3, cx + r * 0.75, cy - r * 0.62, 1.4, BAND[look & 7]);
-      limb(g, cx - r + 0.3, cy - r * 0.3, cx - r - 2.2, cy + 1.6, 1, BAND[look & 7]);
+      if (view === 'front') limb(g, cx - r + 0.2, cy - r * 0.5, cx + r - 0.2, cy - r * 0.5, 1.4, BAND[look & 7]);
+      else {
+        limb(g, cx - r + 0.3, cy - r * 0.3, cx + r * 0.75, cy - r * 0.62, 1.4, BAND[look & 7]);
+        limb(g, cx - r + 0.3, cy - r * 0.3, cx - r - 2.2, cy + 1.6, 1, BAND[look & 7]);
+      }
     }
-    faceMarks(g, cx, cy, mood, blink);
-    if (mood !== 'dead') { g.fillStyle = 'rgba(200,90,70,0.3)'; g.fillRect(cx + 4.6, cy + 2.1, 1.8, 1); }
+    if (view === 'front') {
+      faceMarks(g, cx - 4.2, cy, mood, blink);
+      if (mood !== 'dead') { g.fillStyle = 'rgba(200,90,70,0.3)'; g.fillRect(cx - 4.6, cy + 2.1, 1.6, 1); g.fillRect(cx + 3, cy + 2.1, 1.6, 1); }
+    } else {
+      faceMarks(g, cx, cy, mood, blink);
+      if (mood !== 'dead') { g.fillStyle = 'rgba(200,90,70,0.3)'; g.fillRect(cx + 4.6, cy + 2.1, 1.8, 1); }
+    }
   }
   function torsoPath(g, x, y) {
     g.beginPath();
@@ -868,20 +909,39 @@
   function hand(g, L, x, y) { circ(g, x, y, 1.55); fs(g, L.skin, 1.1); }
 
   function tool(g, kind, hx, hy, ang) {
-    var dx = Math.cos(ang), dy = Math.sin(ang);
+    var dx = Math.cos(ang), dy = Math.sin(ang), nx = -dy, ny = dx, ex, ey;
     if (kind === 'pick') {
       limb(g, hx - dx * 2, hy - dy * 2, hx + dx * 8, hy + dy * 8, 1.3, '#7a5a38');
-      var ex = hx + dx * 8, ey = hy + dy * 8, nx = -dy, ny = dx;
-      g.beginPath(); g.moveTo(ex - nx * 4, ey - ny * 4 - dy); g.quadraticCurveTo(ex + dx * 1.5, ey + dy * 1.5, ex + nx * 4, ey + ny * 4 - dy);
+      ex = hx + dx * 8; ey = hy + dy * 8;
+      g.beginPath(); g.moveTo(ex - nx * 4 - dx, ey - ny * 4 - dy); g.quadraticCurveTo(ex + dx * 1.5, ey + dy * 1.5, ex + nx * 4 - dx, ey + ny * 4 - dy);
       g.strokeStyle = C.out; g.lineWidth = 1.8 + LW * 1.6; g.stroke();
       g.strokeStyle = '#a7a59c'; g.lineWidth = 1.8; g.stroke();
+    } else if (kind === 'axe') {
+      limb(g, hx - dx * 2, hy - dy * 2, hx + dx * 8.5, hy + dy * 8.5, 1.3, '#7a5a38');
+      ex = hx + dx * 7.5; ey = hy + dy * 7.5;
+      poly(g, [ex - dx * 1.5, ey - dy * 1.5, ex + nx * 4 - dx * 2.2, ey + ny * 4 - dy * 2.2, ex + nx * 4.4 + dx * 2.4, ey + ny * 4.4 + dy * 2.4, ex + dx * 1.5, ey + dy * 1.5]);
+      fs(g, '#b8b6ac', 1.1);
+    } else if (kind === 'hammer') {
+      limb(g, hx - dx * 1.5, hy - dy * 1.5, hx + dx * 6.5, hy + dy * 6.5, 1.3, '#7a5a38');
+      ex = hx + dx * 6.5; ey = hy + dy * 6.5;
+      poly(g, [ex - nx * 2.8 - dx * 1.4, ey - ny * 2.8 - dy * 1.4, ex + nx * 2.8 - dx * 1.4, ey + ny * 2.8 - dy * 1.4, ex + nx * 2.8 + dx * 1.4, ey + ny * 2.8 + dy * 1.4, ex - nx * 2.8 + dx * 1.4, ey - ny * 2.8 + dy * 1.4]);
+      fs(g, '#8e8c84', 1.1);
+    } else if (kind === 'sickle') {
+      limb(g, hx - dx * 1, hy - dy * 1, hx + dx * 3.5, hy + dy * 3.5, 1.3, '#7a5a38');
+      ex = hx + dx * 3.5; ey = hy + dy * 3.5;
+      g.beginPath(); g.moveTo(ex, ey);
+      g.quadraticCurveTo(ex + dx * 5 + nx * 1, ey + dy * 5 + ny * 1, ex + dx * 3 + nx * 4.5, ey + dy * 3 + ny * 4.5);
+      g.strokeStyle = C.out; g.lineWidth = 1.6 + LW * 1.6; g.stroke(); g.strokeStyle = '#c8c6bc'; g.lineWidth = 1.6; g.stroke();
+    } else if (kind === 'ladle') {
+      limb(g, hx - dx * 1, hy - dy * 1, hx + dx * 7, hy + dy * 7, 1, '#8a6a44');
+      circ(g, hx + dx * 8, hy + dy * 8, 1.6); fs(g, '#9a968c', 1);
     } else if (kind === 'club') {
       limb(g, hx - dx * 1.5, hy - dy * 1.5, hx + dx * 7.5, hy + dy * 7.5, 1.6, '#6e5033');
       circ(g, hx + dx * 8, hy + dy * 8, 1.9); fs(g, '#7a5a38', 1.1);
     } else if (kind === 'rifle') {
       limb(g, hx - dx * 4, hy - dy * 4, hx + dx * 1, hy + dy * 1, 2.4, '#6e5033');
       limb(g, hx, hy, hx + dx * 10, hy + dy * 10, 1.3, '#3c3c38');
-    } else {
+    } else if (kind === 'blade') {
       limb(g, hx - dx * 1.5, hy - dy * 1.5, hx + dx * 1.5, hy + dy * 1.5, 1.4, '#4a3424');
       limb(g, hx - dy * 2.2 + dx * 1.6, hy + dx * 2.2 + dy * 1.6, hx + dy * 2.2 + dx * 1.6, hy - dx * 2.2 + dy * 1.6, 0.9, '#8a7a5a');
       g.beginPath(); g.moveTo(hx + dx * 2, hy + dy * 2); g.lineTo(hx + dx * 10, hy + dy * 10);
@@ -889,57 +949,138 @@
       g.strokeStyle = '#c4c2ba'; g.lineWidth = 2; g.stroke();
     }
   }
-  function muzzle(g, x, y) {
-    g.fillStyle = 'rgba(255,200,90,0.45)'; circ(g, x, y, 3.4); g.fill();
-    poly(g, [x - 1, y - 1.6, x + 4.5, y, x - 1, y + 1.6]); g.fillStyle = '#fff0b0'; g.fill();
+  function muzzle(g, x, y, ang) {
+    g.save(); g.translate(x, y); g.rotate(ang || 0);
+    g.fillStyle = 'rgba(255,200,90,0.45)'; circ(g, 0, 0, 3.4); g.fill();
+    poly(g, [-1, -1.6, 4.5, 0, -1, 1.6]); g.fillStyle = '#fff0b0'; g.fill();
+    g.restore();
   }
 
-  // standing pawn. origin = feet centre, unit scale, facing right.
-  function paintPawn(g, L, pose, t, seed, carrying, weapon, look, drafted) {
+  // work kind -> tool, swing period (ms), crouch (units), swing angles per view [wind, strike]
+  var WORK = {
+    mine: { tool: 'pick', per: 720, crouch: 0, side: [-2.35, 0.75], back: [1.1, -1.55], front: [-1.65, 1.45] },
+    chop: { tool: 'axe', per: 640, crouch: 0, side: [-2.2, 0.35], back: [1.0, -1.5], front: [-1.6, 1.3] },
+    build: { tool: 'hammer', per: 420, crouch: 1, side: [-1.7, 0.45], back: [0.5, -1.45], front: [-1.0, 1.3] }
+  };
+
+  // carried (downed) colonist slung over the shoulders
+  function drawCarried(g, look, bx, by) {
+    var L = LOOKS[((look | 0) % 8 + 8) % 8];
+    g.save(); g.translate(bx - 0.5, by - 12.5); g.scale(0.78, 0.78);
+    ell(g, 10.5, -0.6, 1.9, 1.3); fs(g, dark(L.pants, 0.45), 1.1);
+    ell(g, 11, 1.8, 1.9, 1.3); fs(g, dark(L.pants, 0.45), 1.1);
+    g.save(); g.translate(-4.5, 0.5); g.rotate(-Math.PI / 2); torso(g, L, 0, 7); g.restore();
+    g.save(); g.translate(-10.5, 3); g.rotate(0.9); headAt(g, L, 0, 0, 6.4, 'sleep', true, look, 'side'); g.restore();
+    g.restore();
+  }
+
+  // standing / crouching pawn. origin = feet centre, unit scale, facing right (side view).
+  function paintPawn(g, L, pose, t, seed, carrying, weapon, look, drafted, work, aim, carryLook) {
     var T = t + seed * 1337, bob = 0, sway = 0, lean = 0;
+    var actionPose = pose === 'work' || pose === 'shoot' || pose === 'fight';
+    var view = actionPose && aim === 'N' ? 'back' : actionPose && aim === 'S' ? 'front' : 'side';
+    var wk = pose === 'work' ? (work || 'mine') : null;
+    var crouch = wk === 'sow' || wk === 'harvest' ? 3.2 : wk === 'doctor' ? 4.6 : 0;
     if (pose === 'walk') { var ph = T / 115; bob = -Math.abs(Math.sin(ph)) * 1.5; sway = Math.sin(ph); }
     else if (pose === 'idle' || pose === 'shoot' || pose === 'eat') { bob = Math.sin(T / 520) * 0.45; }
-    var c = 0, a = 0;
-    if (pose === 'work') {
-      c = (T % 700) / 700;
-      a = c < 0.6 ? lerp(-0.6, -2.35, smooth(c / 0.6)) : lerp(-2.35, 0.75, smooth((c - 0.6) / 0.4));
-      bob = c > 0.6 ? 0.7 * smooth((c - 0.6) / 0.4) : 0; lean = c > 0.6 ? 0.8 : -0.3;
+    var W = WORK[wk], c = 0, a = 0;
+    if (W) {
+      c = (T % W.per) / W.per;
+      var rng2 = W[view];
+      a = c < 0.6 ? lerp(rng2[0] * 0.35, rng2[0], smooth(c / 0.6)) : lerp(rng2[0], rng2[1], smooth((c - 0.6) / 0.4));
+      bob = c > 0.6 ? 0.7 * smooth((c - 0.6) / 0.4) : 0;
+      if (view === 'side') lean = c > 0.6 ? 0.8 : -0.3;
+      if (view === 'back') bob = c > 0.6 ? -0.6 : 0.3;
+      crouch = W.crouch;
     }
     var jab = 0;
-    if (pose === 'fight') { jab = Math.max(0, Math.sin(T / 420 * TAU)); lean = jab * 1.2; bob = -jab * 0.4; }
+    if (pose === 'fight') { jab = Math.max(0, Math.sin(T / 420 * TAU)); lean = view === 'side' ? jab * 1.2 : 0; bob = -jab * 0.4; }
     var shotK = (T % 760) / 760, flash = pose === 'shoot' && shotK < 0.09;
-    if (pose === 'shoot') lean = flash ? -0.6 : 0;
-    shadowBlob(g, 1.8, 0.6, 7.2, 2.5, 0.32);
-    var fy = -0.6;
-    ell(g, -2.4 - sway * 1.6, fy + (sway > 0 ? -0.3 : 0), 1.9, 1.2); fs(g, dark(L.pants, 0.45), 1.1);
-    ell(g, 2.4 + sway * 1.6, fy + (sway < 0 ? -0.3 : 0), 1.9, 1.2); fs(g, dark(L.pants, 0.45), 1.1);
-    var bx = lean, by = -2.4 + bob;
-    var restRifle = drafted && !carrying && (pose === 'idle' || pose === 'walk');
+    if (pose === 'shoot' && view === 'side') lean = flash ? -0.6 : 0;
+    shadowBlob(g, 1.8, 0.6, 7.2 + crouch * 0.4, 2.5, 0.32);
+    // feet
+    var fy = -0.6, spread = crouch ? 1.2 : 0;
+    ell(g, -2.4 - sway * 1.6 - spread, fy + (sway > 0 ? -0.3 : 0), 1.9, 1.2); fs(g, dark(L.pants, 0.45), 1.1);
+    ell(g, 2.4 + sway * 1.6 + spread, fy + (sway < 0 ? -0.3 : 0), 1.9, 1.2); fs(g, dark(L.pants, 0.45), 1.1);
+    var bx = lean, by = -2.4 + bob + crouch;
+    var restRifle = drafted && !carrying && carryLook == null && (pose === 'idle' || pose === 'walk');
+    // back hand (behind torso)
     var bh = { x: bx - 6, y: by - 4.5 - sway * 0.8 };
     if (carrying || pose === 'eat') bh = { x: bx + 1.5, y: by - 4 };
-    if (pose !== 'shoot' && !restRifle) hand(g, L, bh.x, bh.y);
+    if (view !== 'side') bh = { x: bx - 6, y: by - 4 };
+    var backHandHidden = pose === 'shoot' || restRifle || carryLook != null || wk === 'doctor' || wk === 'cook';
+    if (!backHandHidden) hand(g, L, bh.x, bh.y);
     torso(g, L, bx, by);
-    var hx = bx + 0.4 + lean * 0.3, hy = by - 15.8;
+    if (view === 'back') { line(g, bx, by - 9.5, bx, by - 2, 'rgba(20,14,8,0.25)', 0.8); }
+    if (carryLook != null) drawCarried(g, carryLook, bx, by);
+    var hx = bx + (view === 'side' ? 0.4 + lean * 0.3 : 0), hy = by - 15.8;
     var blink = (T % 3400) < 130;
     var mood = pose === 'fight' || pose === 'shoot' ? 'fight' : 'ok';
-    headAt(g, L, hx, hy, 7.4, L.style === 'hood' ? 'fight' : mood, blink && pose !== 'shoot', look);
-    if (pose === 'work') {
-      var sx = bx + 2.6, sy = by - 7.5;
-      var hxx = sx + Math.cos(a) * 5, hyy = sy + Math.sin(a) * 5;
-      tool(g, 'pick', hxx, hyy, a); hand(g, L, hxx, hyy);
+    // tool raised behind the head (front view wind-up) is drawn before the head? no: tools are always in front.
+    headAt(g, L, hx, hy, 7.4, L.style === 'hood' ? 'fight' : mood, blink && pose !== 'shoot', look, view);
+    var sx, sy, hxx, hyy;
+    if (W) {
+      sx = bx + (view === 'side' ? 2.6 : 3.4); sy = by - (view === 'back' ? 9.5 : 7.5);
+      hxx = sx + Math.cos(a) * 5; hyy = sy + Math.sin(a) * 5;
+      if (view === 'front') hand(g, L, bx - 4.6, by - 4.5);
+      tool(g, W.tool, hxx, hyy, a); hand(g, L, hxx, hyy);
+    } else if (wk === 'sow') {
+      var sk = (T % 900) / 900, reach = smooth(sk < 0.5 ? sk * 2 : (1 - sk) * 2);
+      var tx = view === 'side' ? bx + 4 + reach * 3.5 : bx + 2 + reach * 2, ty = by - 6 + reach * 3.5;
+      hand(g, L, tx, ty);
+      if (sk > 0.35) {
+        for (var i = 0; i < 4; i++) {
+          var f = (sk - 0.35) / 0.65, sx2 = tx + 1 + i * 1.3 * (view === 'side' ? 1 : (i % 2 ? 1 : -1)), sy2 = ty + 1 + f * (4 + i * 1.4);
+          g.fillStyle = '#e8d8a0'; g.fillRect(sx2, sy2, 0.9, 0.9);
+        }
+      }
+      if (view !== 'back') { rr(g, bx - 3, by - 6.5, 5, 4, 1.4); fs(g, '#a88a58', 0.9); }
+    } else if (wk === 'harvest') {
+      var hk = (T % 800) / 800, ang = view === 'side' ? lerp(-0.2, 1.5, smooth(hk < 0.5 ? hk * 2 : (1 - hk) * 2)) : lerp(0.3, 2.8, smooth(hk < 0.5 ? hk * 2 : (1 - hk) * 2));
+      hxx = bx + (view === 'side' ? 4.5 : 0) + Math.cos(ang) * 2.5; hyy = by - 4 + Math.sin(ang) * 1.5;
+      tool(g, 'sickle', hxx, hyy, view === 'side' ? 0.6 : ang);
+      hand(g, L, hxx, hyy);
+    } else if (wk === 'cook') {
+      var ck = T / 260, cxr = Math.cos(ck) * 1.6, cyr = Math.sin(ck) * 0.8;
+      if (view === 'side') { hxx = bx + 6.5 + cxr; hyy = by - 5 + cyr; tool(g, 'ladle', hxx, hyy, 1.1); }
+      else if (view === 'front') { hxx = bx + 1 + cxr; hyy = by - 3 + cyr; tool(g, 'ladle', hxx, hyy, 1.5); }
+      else { hxx = bx + 1 + cxr; hyy = by - 12 + cyr; tool(g, 'ladle', hxx, hyy, -1.5); }
+      hand(g, L, hxx, hyy); hand(g, L, bx - 4.5, by - 5);
+    } else if (wk === 'doctor') {
+      var dk2 = Math.sin(T / 300) * 0.8;
+      var dxh = view === 'side' ? bx + 5 : bx, dyh = view === 'back' ? by - 10 : by - 2.5;
+      rr(g, dxh - 2 + dk2, dyh - 1.6, 4.2, 3.2, 1.4); fs(g, '#f2ece0', 1);
+      line(g, dxh - 1.2 + dk2, dyh, dxh + 1.6 + dk2, dyh, '#c84a3a', 0.8);
+      hand(g, L, dxh - 2.6 + dk2, dyh + 0.4); hand(g, L, dxh + 2.6 + dk2 * 0.5, dyh - 0.4);
     } else if (pose === 'shoot') {
-      var rx = bx + 3 + lean, ry = by - 8;
-      tool(g, 'rifle', rx, ry, -0.04);
-      hand(g, L, rx - 2.4, ry + 0.6); hand(g, L, rx + 3.2, ry + 0.2);
-      if (flash) muzzle(g, rx + 10.8, ry - 0.4);
+      if (view === 'side') {
+        var rx = bx + 3 + lean, ry = by - 8;
+        tool(g, 'rifle', rx, ry, -0.04);
+        hand(g, L, rx - 2.4, ry + 0.6); hand(g, L, rx + 3.2, ry + 0.2);
+        if (flash) muzzle(g, rx + 10.8, ry - 0.4, 0);
+      } else {
+        var va = view === 'back' ? -Math.PI / 2 : Math.PI / 2, rx2 = bx + 2.2, ry2 = view === 'back' ? by - 11 : by - 5;
+        tool(g, 'rifle', rx2, ry2, va);
+        hand(g, L, rx2, ry2 - Math.sin(va) * 2); hand(g, L, rx2, ry2 + Math.sin(va) * 3);
+        if (flash) muzzle(g, rx2, ry2 + Math.sin(va) * 10.8, va);
+      }
     } else if (pose === 'fight' || weapon) {
-      var fx = bx + 5.5 + jab * 3.5, fyy = by - 6 - jab * 1.5;
-      tool(g, weapon || 'club', fx, fyy, -1.05 + jab * 0.9); hand(g, L, fx, fyy);
+      if (weapon === 'fist' || (pose === 'fight' && !weapon && false)) {
+        hand(g, L, bx + 5.5 + jab * 4, by - 7 - jab);
+      } else {
+        var fx = bx + 5.5 + jab * 3.5, fyy = by - 6 - jab * 1.5;
+        if (view === 'back') { fx = bx + 3; fyy = by - 10 - jab * 4; }
+        if (view === 'front') { fx = bx + 3; fyy = by - 4 + jab * 3; }
+        var wa = view === 'side' ? -1.05 + jab * 0.9 : view === 'back' ? -1.4 : 1.3 - (1 - jab) * 2.4;
+        tool(g, weapon || 'club', fx, fyy, wa); hand(g, L, fx, fyy);
+      }
     } else if (pose === 'eat') {
       var ek = (T % 1400) / 1400, up = ek < 0.5 ? smooth(ek * 2) : smooth((1 - ek) * 2);
       paintItem(g, 'meal', bx + 3.5, by - 4.2, 0.75);
       hand(g, L, bx + 5 - up * 0.5, by - 5 - up * 7.5);
       hand(g, L, bx + 0.5, by - 3.2);
+    } else if (carryLook != null) {
+      hand(g, L, bx + 5.5, by - 12); hand(g, L, bx - 3.5, by - 12.5);
     } else if (restRifle) {
       tool(g, 'rifle', bx - 1, by - 3.5, -0.85);
       hand(g, L, bx - 1.5, by - 3); hand(g, L, bx + 3, by - 8);
@@ -948,7 +1089,7 @@
     } else {
       hand(g, L, bx + 6, by - 4.5 + sway * 0.8);
     }
-    if (carrying) paintItem(g, carrying === 'food' ? 'berries' : carrying, bx + 3.2, by - 3.4, 0.95);
+    if (carrying && carryLook == null) paintItem(g, carrying === 'food' ? 'berries' : carrying, bx + 3.2, by - 3.4, 0.95);
   }
 
   // lying pawn: mode 'sleep' | 'dead' | 'downed'
@@ -1289,6 +1430,47 @@
       rr(g, 14.3, 10, 3.4, 10.5, 1.5); fill(g, '#2a1e12');
       circ(g, 16, 23.6, 1.9); fill(g, '#2a1e12');
     },
+    erase: function (g) {
+      g.save(); g.translate(16, 16); g.rotate(-0.6);
+      rr(g, -11, -6, 22, 12, 2.5); fs(g, '#d88a7a', 1.8);
+      g.beginPath(); g.rect(-11, -6, 8, 12); g.fillStyle = '#5a7890'; g.fill();
+      rr(g, -11, -6, 22, 12, 2.5); stroke(g, C.out, 1.8);
+      g.fillStyle = 'rgba(255,245,230,0.35)'; g.fillRect(-2, -4.5, 11, 2);
+      g.restore();
+      g.save(); g.setLineDash([2.4, 2]); line(g, 5, 29, 28, 29, '#e8dcc0', 1.6); g.restore();
+    },
+    rescue: function (g) {
+      limb(g, 4, 21, 28, 21, 1.6, '#7a5a38'); limb(g, 4, 27, 28, 27, 1.6, '#7a5a38');
+      rr(g, 7, 19.5, 18, 9, 1.5); fs(g, '#e8e0cc', 1.4);
+      circ(g, 11, 17, 4); fs(g, LOOKS[0].skin, 1.4);
+      g.beginPath(); g.arc(11, 17, 4.4, Math.PI, 0); g.closePath(); fs(g, LOOKS[0].hair, 1.2);
+      circ(g, 23, 9, 6.5); fs(g, '#f2ece0', 1.6);
+      g.fillStyle = '#c84a3a'; g.fillRect(21.6, 5, 2.8, 8); g.fillRect(19, 7.6, 8, 2.8);
+    },
+    medicine: function (g) {
+      rr(g, 5, 9, 22, 18, 2.5); fs(g, '#f2ece0', 1.8);
+      rr(g, 11.5, 5, 9, 5, 1.5); fs(g, '#9a968c', 1.4);
+      g.fillStyle = '#c84a3a'; g.fillRect(14.2, 12.5, 3.6, 11); g.fillRect(10.5, 16.2, 11, 3.6);
+      g.fillStyle = 'rgba(20,14,8,0.15)'; g.fillRect(5.8, 23, 20.4, 3.2);
+    },
+    tutorial: function (g) {
+      g.beginPath(); g.arc(16, 13, 8.5, Math.PI * 0.8, Math.PI * 2.2); g.lineTo(19.5, 22); g.lineTo(12.5, 22); g.closePath();
+      fs(g, '#f0cb6a', 1.8);
+      g.fillStyle = 'rgba(255,250,225,0.6)'; ell(g, 12.5, 9.5, 2.4, 1.6); g.fill();
+      rr(g, 12.2, 22, 7.6, 3, 1); fs(g, '#9a968c', 1.3); rr(g, 13, 25, 6, 2.6, 1); fs(g, '#7a766c', 1.3);
+      line(g, 16, 13, 16, 20, '#a87a2a', 1);
+    },
+    focus: function (g) {
+      g.strokeStyle = C.out; g.lineWidth = 5;
+      function br() {
+        g.beginPath();
+        g.moveTo(4, 11); g.lineTo(4, 4); g.lineTo(11, 4); g.moveTo(21, 4); g.lineTo(28, 4); g.lineTo(28, 11);
+        g.moveTo(28, 21); g.lineTo(28, 28); g.lineTo(21, 28); g.moveTo(11, 28); g.lineTo(4, 28); g.lineTo(4, 21); g.stroke();
+      }
+      br(); g.strokeStyle = '#e8dcc0'; g.lineWidth = 2.4; br();
+      circ(g, 16, 16, 4); fs(g, '#f0cb6a', 1.5);
+    },
+    hunt: function (g) { paintCrosshair(g); },
     close: function (g) {
       line(g, 8, 8, 24, 24, C.out, 6); line(g, 24, 8, 8, 24, C.out, 6);
       line(g, 8, 8, 24, 24, '#e8dcc0', 3); line(g, 24, 8, 8, 24, '#e8dcc0', 3);
@@ -1311,11 +1493,16 @@
   }
 
   // designation badge (cached sprite)
-  var DESIG = { chop: paintAxe, mine: paintPick, harvest: paintSickle, deconstruct: function (g) { paintHammer(g); paintRedX(g, 23, 23, 6); } };
+  function paintCrosshair(g) {
+    circ(g, 16, 16, 9); g.strokeStyle = C.out; g.lineWidth = 4.4; g.stroke(); g.strokeStyle = '#e0644e'; g.lineWidth = 2.2; g.stroke();
+    [[16, 3, 16, 10], [16, 22, 16, 29], [3, 16, 10, 16], [22, 16, 29, 16]].forEach(function (l) { line(g, l[0], l[1], l[2], l[3], C.out, 4.4); line(g, l[0], l[1], l[2], l[3], '#e0644e', 2.2); });
+    circ(g, 16, 16, 1.6); fill(g, '#e0644e');
+  }
+  var DESIG = { chop: paintAxe, mine: paintPick, harvest: paintSickle, hunt: paintCrosshair, deconstruct: function (g) { paintHammer(g); paintRedX(g, 23, 23, 6); } };
   function paintDesignation(g, kind) {
-    circ(g, 16, 13, 8.6); g.fillStyle = 'rgba(14,12,10,0.72)'; g.fill();
-    g.strokeStyle = 'rgba(244,239,226,0.85)'; g.lineWidth = 1; g.stroke();
-    fit(g, 0.46, 8.6, 5.6, function () { (DESIG[kind] || paintAxe)(g); });
+    circ(g, 16, 16, 14.5); g.fillStyle = 'rgba(14,12,10,0.7)'; g.fill();
+    g.strokeStyle = 'rgba(244,239,226,0.9)'; g.lineWidth = 1.8; g.stroke();
+    fit(g, 0.74, 4.2, 4.2, function () { (DESIG[kind] || paintAxe)(g); });
   }
 
   // ---------------------------------------------------------------- sky
@@ -1330,6 +1517,41 @@
       vig = { w: w, h: h, c: c };
     }
     return vig.c;
+  }
+
+  var darkL = { c: null, g: null, w: 0, h: 0 };
+  function darkLayer(w, h) {
+    var cw = Math.max(1, Math.ceil(w / 2)), ch = Math.max(1, Math.ceil(h / 2));
+    if (!darkL.c || darkL.w !== cw || darkL.h !== ch) { darkL.c = mk(cw, ch); darkL.g = darkL.c.getContext('2d'); darkL.w = cw; darkL.h = ch; }
+    return darkL;
+  }
+  // ---------------------------------------------------------------- hostile rim
+  // draws a figure into a scratch canvas, then stamps a red silhouette around it so enemies read at night
+  var rimA = null, rimB = null;
+  function scratch(o, w, h) {
+    if (!o || o.c.width < w || o.c.height < h) {
+      var c = mk(Math.max(w, o ? o.c.width : 0), Math.max(h, o ? o.c.height : 0));
+      o = { c: c, g: c.getContext('2d') };
+    }
+    return o;
+  }
+  function drawWithRim(ctx, px, py, size, fn) {
+    var ds = devScale(ctx), ox = 0.45 * size, oy = 0.7 * size, bw = size * 1.9, bh = size * 1.75;
+    var W = Math.ceil(bw * ds), H = Math.ceil(bh * ds);
+    if (W > 1024 || H > 1024 || W < 4) { fn(ctx); return; }
+    rimA = scratch(rimA, W, H); rimB = scratch(rimB, W, H);
+    var a = rimA.g, b = rimB.g;
+    a.setTransform(1, 0, 0, 1, 0, 0); a.clearRect(0, 0, W + 2, H + 2);
+    a.setTransform(ds, 0, 0, ds, (ox - px) * ds, (oy - py) * ds);
+    fn(a);
+    b.setTransform(1, 0, 0, 1, 0, 0); b.globalCompositeOperation = 'source-over'; b.clearRect(0, 0, W + 2, H + 2);
+    b.drawImage(rimA.c, 0, 0, W, H, 0, 0, W, H);
+    b.globalCompositeOperation = 'source-in'; b.fillStyle = '#ff5038'; b.fillRect(0, 0, W, H);
+    b.globalCompositeOperation = 'source-over';
+    var k = Math.max(1.2, Math.min(2.4, size * 0.05)), dx = px - ox, dy = py - oy, sw = W / ds, sh = H / ds;
+    var offs = [[k, 0], [-k, 0], [0, k], [0, -k], [k * 0.7, k * 0.7], [-k * 0.7, k * 0.7], [k * 0.7, -k * 0.7], [-k * 0.7, -k * 0.7]];
+    for (var i = 0; i < offs.length; i++) ctx.drawImage(rimB.c, 0, 0, W, H, dx + offs[i][0], dy + offs[i][1], sw, sh);
+    ctx.drawImage(rimA.c, 0, 0, W, H, dx, dy, sw, sh);
   }
 
   function stateOf(s) { return s || 'idle'; }
@@ -1465,7 +1687,10 @@
     },
 
     drawDesignation: function (ctx, kind, px, py, size) {
-      drawSprite(ctx, 'des_' + kind, px, py, size, DESIG_SPEC, paintDesignation, kind);
+      var s2 = size * 0.4;
+      ctx.save(); ctx.globalAlpha = 0.78;
+      drawSprite(ctx, 'des_' + kind, px + size - s2 - size * 0.03, py + size * 0.03, s2, DESIG_SPEC, paintDesignation, kind);
+      ctx.restore();
     },
 
     drawColonist: function (ctx, c, px, py, size, time) {
@@ -1474,6 +1699,7 @@
       var look = ((c.look | 0) % 8 + 8) % 8, L = LOOKS[look];
       var seed = look * 3 + (c.name ? c.name.length : 0);
       var st = stateOf(c.state);
+      var carryLook = c.carryPawn == null || c.carryPawn === false ? null : c.carryPawn;
       ctx.save();
       ctx.translate(px + size / 2, py + size * 0.9);
       ctx.scale(s, s);
@@ -1487,34 +1713,45 @@
       if (c.drafted && st !== 'dead') {
         ell(ctx, 0, 0.3, 10.2, 3.4); ctx.strokeStyle = 'rgba(232,144,58,0.85)'; ctx.lineWidth = 1.1; ctx.stroke();
       }
+      // N/S aimed actions use front/back views and must not be mirrored oddly; keep dir flip for side views
       ctx.scale(dir, 1);
       if (st === 'sleep' || st === 'dead' || st === 'downed') {
         paintLying(ctx, L, t, seed, st, look);
         if (st === 'sleep') { ctx.scale(dir, 1); drawZs(ctx, t + seed * 300); }
+      } else if (st === 'melee') {
+        paintPawn(ctx, L, 'fight', t, seed, null, 'fist', look, !!c.drafted, null, c.aim, null);
+        if (c.drafted) { ctx.scale(dir, 1); draftBadge(ctx); }
       } else {
-        paintPawn(ctx, L, st, t, seed, c.carrying || null, null, look, !!c.drafted);
+        paintPawn(ctx, L, st, t, seed, c.carrying || null, null, look, !!c.drafted, c.work || null, c.aim, carryLook);
         if (c.drafted) { ctx.scale(dir, 1); draftBadge(ctx); }
       }
       ctx.restore();
     },
 
     drawEnemy: function (ctx, kind, px, py, size, time, dir, state) {
-      var t = time || 0, s = size / 32, d = dir === -1 ? -1 : 1, st = state || 'walk';
-      ctx.save();
-      ctx.translate(px + size / 2, py + size * 0.9);
-      ctx.scale(s, s);
-      ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-      if (st !== 'dead') hostileRing(ctx, t);
-      ctx.scale(d, 1);
-      if (kind === 'boar') {
-        if (st === 'dead' || st === 'downed') paintBoarLying(ctx, t, st === 'dead');
-        else paintBoar(ctx, st === 'idle' ? t * 0.3 : (st === 'fight' ? t * 1.6 : t), 3);
-      } else {
-        if (st === 'dead' || st === 'downed' || st === 'sleep') paintLying(ctx, RAIDER, t, 5, st === 'sleep' ? 'downed' : st, 0);
-        else if (st === 'shoot') paintPawn(ctx, RAIDER, 'shoot', t, 5, null, null, 0, false);
-        else paintPawn(ctx, RAIDER, st === 'fight' ? 'fight' : (st === 'idle' ? 'idle' : 'walk'), t, 5, null, 'blade', 0, false);
+      var t = time || 0, d = dir === -1 ? -1 : 1, st = state || 'walk';
+      function body(g) {
+        g.save();
+        g.translate(px + size / 2, py + size * 0.9);
+        g.scale(size / 32, size / 32);
+        g.lineJoin = 'round'; g.lineCap = 'round';
+        g.scale(d, 1);
+        if (kind === 'boar') {
+          if (st === 'dead' || st === 'downed') paintBoarLying(g, t, st === 'dead');
+          else paintBoar(g, st === 'idle' ? t * 0.3 : (st === 'fight' || st === 'melee' ? t * 1.6 : t), 3);
+        } else {
+          if (st === 'dead' || st === 'downed' || st === 'sleep') paintLying(g, RAIDER, t, 5, st === 'sleep' ? 'downed' : st, 0);
+          else if (st === 'shoot') paintPawn(g, RAIDER, 'shoot', t, 5, null, null, 0, false);
+          else paintPawn(g, RAIDER, st === 'fight' || st === 'melee' ? 'fight' : (st === 'idle' ? 'idle' : 'walk'), t, 5, null, 'blade', 0, false);
+        }
+        g.restore();
       }
+      ctx.save();
+      ctx.translate(px + size / 2, py + size * 0.9); ctx.scale(size / 32, size / 32);
+      if (st !== 'dead') hostileRing(ctx, t);
       ctx.restore();
+      if (st === 'dead') { body(ctx); return; }
+      drawWithRim(ctx, px, py, size, body);
     },
 
     drawProjectile: function (ctx, p) {
@@ -1640,7 +1877,7 @@
       ctx.restore();
     },
 
-    drawSky: function (ctx, w, h, phase, weather, time) {
+    drawSky: function (ctx, w, h, phase, weather, time, lights) {
       var ph = frac(phase || 0), t = time || 0;
       var d = Math.cos((ph - 0.25) * TAU);
       var night = smooth((0.12 - d) / 0.7);
@@ -1654,36 +1891,66 @@
         gr.addColorStop(1, dawn ? 'rgba(255,214,150,' + (0.12 * warm) + ')' : 'rgba(190,80,70,' + (0.18 * warm) + ')');
         ctx.fillStyle = gr; ctx.fillRect(0, 0, w, h);
       }
+      // mild blue mood tint at night (keeps units readable)
       if (night > 0.01) {
         ctx.globalCompositeOperation = 'multiply';
-        var r = Math.round(lerp(255, 70, night)), g2 = Math.round(lerp(255, 88, night)), b = Math.round(lerp(255, 150, night));
-        ctx.fillStyle = 'rgb(' + r + ',' + g2 + ',' + b + ')'; ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = 'rgb(' + Math.round(lerp(255, 196, night)) + ',' + Math.round(lerp(255, 206, night)) + ',' + Math.round(lerp(255, 238, night)) + ')';
+        ctx.fillRect(0, 0, w, h);
         ctx.globalCompositeOperation = 'source-over';
-        ctx.globalAlpha = night * 0.85;
-        ctx.drawImage(vignette(w, h), 0, 0, w, h);
-        ctx.globalAlpha = 1;
-        if (!storm && night > 0.5) {
-          var fa = (night - 0.5) * 2;
-          for (var i = 0; i < 12; i++) {
-            var fx = frac(Math.sin(i * 91.7) * 43758.5 + t / (40000 + i * 3000)) * w;
-            var fy = frac(Math.sin(i * 57.3) * 23421.6) * h + Math.sin(t / 900 + i) * 12;
-            var tw = 0.5 + 0.5 * Math.sin(t / (380 + i * 40) + i);
-            ctx.globalAlpha = fa * tw * 0.9;
-            ctx.fillStyle = 'rgba(230,240,140,0.25)'; circ(ctx, fx, fy, 3.2); ctx.fill();
-            ctx.fillStyle = '#f4f7b0'; ctx.fillRect(fx - 0.8, fy - 0.8, 1.6, 1.6);
+      }
+      // darkness layer (night + storm gloom) on a cached half-res canvas, lights cut out of it
+      var dA = night * 0.42 + (storm ? 0.24 * (1 - night * 0.4) : 0);
+      var L = lights && lights.length ? lights : null;
+      if (dA > 0.01) {
+        var D = darkLayer(w, h), g = D.g, sxk = D.w / w, syk = D.h / h;
+        g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1;
+        g.clearRect(0, 0, D.w, D.h);
+        g.fillStyle = night > 0.3 ? 'rgba(8,14,40,' + dA.toFixed(3) + ')' : 'rgba(26,32,44,' + dA.toFixed(3) + ')';
+        g.fillRect(0, 0, D.w, D.h);
+        if (night > 0.01) { g.globalAlpha = night * 0.5; g.drawImage(vignette(w, h), 0, 0, D.w, D.h); g.globalAlpha = 1; }
+        if (L) {
+          g.globalCompositeOperation = 'destination-out';
+          g.setTransform(sxk, 0, 0, syk, 0, 0);
+          for (var i = 0; i < L.length && i < 32; i++) {
+            var li = L[i], r = (li.r || 100) * (1 + Math.sin(t / 110 + i * 1.7) * 0.025);
+            var rg = g.createRadialGradient(li.x, li.y, 0, li.x, li.y, r);
+            rg.addColorStop(0, 'rgba(0,0,0,1)'); rg.addColorStop(0.45, 'rgba(0,0,0,0.85)'); rg.addColorStop(1, 'rgba(0,0,0,0)');
+            g.fillStyle = rg; g.fillRect(li.x - r, li.y - r, r * 2, r * 2);
           }
-          ctx.globalAlpha = 1;
+          g.globalCompositeOperation = 'source-over'; g.setTransform(1, 0, 0, 1, 0, 0);
+        }
+        ctx.drawImage(D.c, 0, 0, D.w, D.h, 0, 0, w, h);
+        // warm glow around lights
+        if (L) {
+          var ga = Math.min(1, dA * 1.6);
+          for (var j = 0; j < L.length && j < 32; j++) {
+            var lj = L[j], r2 = (lj.r || 100) * 0.75 * (1 + Math.sin(t / 95 + j) * 0.04);
+            var wg = ctx.createRadialGradient(lj.x, lj.y, 0, lj.x, lj.y, r2);
+            wg.addColorStop(0, 'rgba(255,170,80,' + (0.22 * ga).toFixed(3) + ')'); wg.addColorStop(1, 'rgba(255,140,50,0)');
+            ctx.fillStyle = wg; ctx.fillRect(lj.x - r2, lj.y - r2, r2 * 2, r2 * 2);
+          }
         }
       }
+      if (night > 0.5 && !storm) {
+        var fa = (night - 0.5) * 2;
+        for (var k = 0; k < 12; k++) {
+          var fx = frac(Math.sin(k * 91.7) * 43758.5 + t / (40000 + k * 3000)) * w;
+          var fy = frac(Math.sin(k * 57.3) * 23421.6) * h + Math.sin(t / 900 + k) * 12;
+          var tw = 0.5 + 0.5 * Math.sin(t / (380 + k * 40) + k);
+          ctx.globalAlpha = fa * tw * 0.9;
+          ctx.fillStyle = 'rgba(230,240,140,0.25)'; circ(ctx, fx, fy, 3.2); ctx.fill();
+          ctx.fillStyle = '#f4f7b0'; ctx.fillRect(fx - 0.8, fy - 0.8, 1.6, 1.6);
+        }
+        ctx.globalAlpha = 1;
+      }
       if (storm) {
-        ctx.fillStyle = 'rgba(34,42,54,0.36)'; ctx.fillRect(0, 0, w, h);
         var n = Math.round(clamp(w * h / 2600, 40, 220));
         ctx.strokeStyle = 'rgba(190,206,226,0.55)'; ctx.lineWidth = 1;
         ctx.beginPath();
-        for (var j = 0; j < n; j++) {
-          var sp = 0.55 + frac(j * 0.618) * 0.35;
-          var rx = frac(j * 0.7548 + 0.13) * (w + 40) - t * 0.08 * sp;
-          var ry = frac(j * 0.5698 + 0.71) * (h + 30) + t * 0.7 * sp;
+        for (var q = 0; q < n; q++) {
+          var sp = 0.55 + frac(q * 0.618) * 0.35;
+          var rx = frac(q * 0.7548 + 0.13) * (w + 40) - t * 0.08 * sp;
+          var ry = frac(q * 0.5698 + 0.71) * (h + 30) + t * 0.7 * sp;
           rx = ((rx % (w + 40)) + (w + 40)) % (w + 40) - 20; ry = (ry % (h + 30)) - 15;
           ctx.moveTo(rx, ry); ctx.lineTo(rx - 3.5, ry + 12);
         }

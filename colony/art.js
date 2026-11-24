@@ -609,20 +609,20 @@
     rr(g, mx, my, mw, mh, 1.6); fs(g, C.cloth, 1.1);
     // pillow & blanket
     var px, py, pw, ph, bx, by, bw, bh;
-    if (d === 0) { px = mx + 2; py = my + 1.5; pw = mw - 4; ph = 5; bx = mx; by = my + 9; bw = mw; bh = mh - 9; }
-    else if (d === 2) { px = mx + 2; py = my + mh - 6.5; pw = mw - 4; ph = 5; bx = mx; by = my; bw = mw; bh = mh - 9; }
+    if (d === 2) { px = mx + 2; py = my + 1.5; pw = mw - 4; ph = 5; bx = mx; by = my + 9; bw = mw; bh = mh - 9; }
+    else if (d === 0) { px = mx + 2; py = my + mh - 6.5; pw = mw - 4; ph = 5; bx = mx; by = my; bw = mw; bh = mh - 9; }
     else if (d === 1) { px = mx + mw - 6.5; py = my + 2; pw = 5; ph = mh - 4; bx = mx; by = my; bw = mw - 9; bh = mh; }
     else { px = mx + 1.5; py = my + 2; pw = 5; ph = mh - 4; bx = mx + 9; by = my; bw = mw - 9; bh = mh; }
     rr(g, px, py, pw, ph, 2); fs(g, '#efe6d2', 1);
     rr(g, bx, by, bw, bh, 1.6); fs(g, '#5a7890', 1.1);
     g.save(); rr(g, bx, by, bw, bh, 1.6); g.clip();
     g.fillStyle = 'rgba(255,250,235,0.25)';
-    if (vert) g.fillRect(bx, d === 0 ? by : by + bh - 2.4, bw, 2.4); else g.fillRect(d === 1 ? bx + bw - 2.4 : bx, by, 2.4, bh);
+    if (vert) g.fillRect(bx, d === 2 ? by : by + bh - 2.4, bw, 2.4); else g.fillRect(d === 1 ? bx + bw - 2.4 : bx, by, 2.4, bh);
     g.fillStyle = 'rgba(15,20,30,0.25)'; g.fillRect(bx, by + bh - 2.5, bw, 2.5);
     g.restore();
     // headboard
-    if (d === 0) { rr(g, x - 0.5, y - 1.5, w + 1, 3.5, 1); fs(g, C.plankHi); }
-    if (d === 2) { rr(g, x - 0.5, y + h - 2, w + 1, 3.5, 1); fs(g, C.plankHi); }
+    if (d === 2) { rr(g, x - 0.5, y - 1.5, w + 1, 3.5, 1); fs(g, C.plankHi); }
+    if (d === 0) { rr(g, x - 0.5, y + h - 2, w + 1, 3.5, 1); fs(g, C.plankHi); }
     if (d === 1) { rr(g, x + w - 2, y - 0.5, 3.5, h + 1, 1); fs(g, C.plankHi); }
     if (d === 3) { rr(g, x - 1.5, y - 0.5, 3.5, h + 1, 1); fs(g, C.plankHi); }
   }
@@ -958,9 +958,9 @@
 
   // work kind -> tool, swing period (ms), crouch (units), swing angles per view [wind, strike]
   var WORK = {
-    mine: { tool: 'pick', per: 720, crouch: 0, side: [-2.35, 0.75], back: [1.1, -1.55], front: [-1.65, 1.45] },
-    chop: { tool: 'axe', per: 640, crouch: 0, side: [-2.2, 0.35], back: [1.0, -1.5], front: [-1.6, 1.3] },
-    build: { tool: 'hammer', per: 420, crouch: 1, side: [-1.7, 0.45], back: [0.5, -1.45], front: [-1.0, 1.3] }
+    mine: { tool: 'pick', per: 720, crouch: 0, side: [-2.35, 0.75], back: [1.1, -1.55], front: [-1.65, 1.18] },
+    chop: { tool: 'axe', per: 640, crouch: 0, side: [-2.2, 0.35], back: [1.0, -1.5], front: [-1.6, 1.15] },
+    build: { tool: 'hammer', per: 420, crouch: 1, side: [-1.7, 0.45], back: [0.5, -1.45], front: [-1.0, 1.2] }
   };
 
   // carried (downed) colonist slung over the shoulders
@@ -1020,7 +1020,7 @@
     headAt(g, L, hx, hy, 7.4, L.style === 'hood' ? 'fight' : mood, blink && pose !== 'shoot', look, view);
     var sx, sy, hxx, hyy;
     if (W) {
-      sx = bx + (view === 'side' ? 2.6 : 3.4); sy = by - (view === 'back' ? 9.5 : 7.5);
+      sx = bx + (view === 'side' ? 2.6 : view === 'front' ? 4.8 : 3.4); sy = by - (view === 'back' ? 9.5 : 7.5);
       hxx = sx + Math.cos(a) * 5; hyy = sy + Math.sin(a) * 5;
       if (view === 'front') hand(g, L, bx - 4.6, by - 4.5);
       tool(g, W.tool, hxx, hyy, a); hand(g, L, hxx, hyy);
@@ -1121,6 +1121,35 @@
     headAt(g, Ld, 0, 0, 6.6, dead ? 'dead' : 'sleep', true, look);
     g.restore();
     if (mode !== 'sleep') hand(g, Ld, -2, -1.2);
+  }
+  // pawn lying in a bed: bedDir 2 = head north (game default), 0 = head south, 1 = head east, 3 = head west
+  function paintInBed(g, L, t, seed, mode, look, bedDir) {
+    var T = t + seed * 1337, dead = mode === 'dead', d = ((bedDir | 0) % 4 + 4) % 4;
+    var Ld = dead ? { skin: mix(L.skin, '#8f8a80', 0.55), hair: mix(L.hair, '#6a6660', 0.4), shirt: mix(L.shirt, '#6a6660', 0.55), pants: L.pants, style: L.style } : L;
+    var br = dead ? 0 : Math.sin(T / (mode === 'downed' ? 500 : 900)) * 0.35;
+    g.save();
+    // origin = feet anchor (tile x 16, y 28.8); bed mattress spans y -25.8..-2.8 (vertical) in these coords
+    if (d === 0) { g.translate(0, -14.3); g.scale(1, -1); g.translate(0, 14.3); }
+    if (d === 1 || d === 3) {
+      if (d === 3) g.scale(-1, 1);
+      // horizontal bed: pillow east, mattress y -20.8..-5.8 (x -13..13)
+      g.save(); g.translate(9.2, -13.4); g.rotate(0.12);
+      headAt(g, Ld, 0, 0, 5.4, dead ? 'dead' : 'sleep', true, look, 'front'); g.restore();
+      rr(g, -12.5, -19.5 - br * 0.5, 17, 12.6 + br, 3); fs(g, '#7a8aa0');
+      line(g, 3, -19, 3, -7.4, 'rgba(255,250,235,0.35)', 1.2);
+      g.restore();
+      return;
+    }
+    var headY = -21.6;
+    g.save(); if (d === 0) { g.translate(0, headY); g.scale(1, -1); g.translate(0, -headY); }
+    headAt(g, Ld, 0, headY, 5.4, dead ? 'dead' : 'sleep', true, look, 'front');
+    g.restore();
+    rr(g, -8.3, -16.6 - br, 16.6, 13.4 + br, 3); fs(g, '#7a8aa0');
+    g.fillStyle = 'rgba(255,250,235,0.3)'; g.fillRect(-8.3, -16.6 - br, 16.6, 2.2);
+    g.fillStyle = 'rgba(20,24,40,0.22)'; g.fillRect(-8.3, -5.6, 16.6, 2.4);
+    if (mode !== 'sleep') { hand(g, Ld, -4.2, -12.5 - br); hand(g, Ld, 4.2, -12.5 - br); }
+    if (mode === 'downed') { rr(g, -2.6, -11.4 - br, 5.2, 2.6, 1); fs(g, '#f2ece0', 0.8); }
+    g.restore();
   }
   function drawZs(ctx, t) {
     for (var i = 0; i < 3; i++) {
@@ -1368,7 +1397,7 @@
     wall_wood: function (g) { fit(g, 0.72, 4.5, 11.5, function () { paintWall(g, 'wood', 0); }); },
     wall_stone: function (g) { fit(g, 0.72, 4.5, 11.5, function () { paintWall(g, 'stone', 0); }); },
     door_wood: function (g) { fit(g, 0.72, 4.5, 11.5, function () { paintDoor(g, 'wood', 0.35, false); }); },
-    bed: function (g) { fit(g, 0.92, 1.3, 2, function () { paintBed(g, 0); }); },
+    bed: function (g) { fit(g, 0.92, 1.3, 2, function () { paintBed(g, 2); }); },
     turret: function (g) { fit(g, 0.95, 0.5, 0, function () { paintTurretBase(g); drawTurretHead(g, -0.3); }); },
     campfire: function (g) { fit(g, 1.05, -1, -4, function () { paintCampfireBase(g); drawFlames(g, 0, 16, 23, 1); }); },
     torch: function (g) { fit(g, 0.8, 3, 7, function () { paintTorchBase(g); drawFlames(g, 300, 16, 3.5, 0.6); }); },
@@ -1715,7 +1744,13 @@
       }
       // N/S aimed actions use front/back views and must not be mirrored oddly; keep dir flip for side views
       ctx.scale(dir, 1);
-      if (st === 'sleep' || st === 'dead' || st === 'downed') {
+      var inBed = c.inBed === true || (typeof c.inBed === 'number' && c.inBed >= 0) || typeof c.bedDir === 'number';
+      if (inBed && (st === 'sleep' || st === 'dead' || st === 'downed')) {
+        ctx.scale(dir, 1);
+        var bd = typeof c.bedDir === 'number' ? c.bedDir : 2;
+        paintInBed(ctx, L, t, seed, st, look, bd);
+        if (st === 'sleep') { ctx.save(); ctx.translate(bd === 1 ? 10 : bd === 3 ? -10 : 0, bd === 0 ? -2 : bd === 2 ? -16 : -8); drawZs(ctx, t + seed * 300); ctx.restore(); }
+      } else if (st === 'sleep' || st === 'dead' || st === 'downed') {
         paintLying(ctx, L, t, seed, st, look);
         if (st === 'sleep') { ctx.scale(dir, 1); drawZs(ctx, t + seed * 300); }
       } else if (st === 'melee') {

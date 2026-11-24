@@ -139,9 +139,10 @@ function setImg(img, url) {
   if (url) { if (img.getAttribute('src') !== url) img.src = url; img.style.visibility = ''; }
   else img.style.visibility = 'hidden';
 }
-function overflowOf(type) {
+function overflowOf(type, dflt) {
   const o = window.Art && window.Art.overflow;
-  return (o && typeof o[type] === 'number') ? o[type] : 0;
+  if (o && typeof o[type] === 'number') return o[type];
+  return type === 'tree' ? 0.85 : (dflt || 0);
 }
 
 // ============================================================
@@ -268,6 +269,7 @@ function migrate(o) {
   if (typeof o.lastRaid !== 'number') o.lastRaid = -1e9;
   if (!o.tut || typeof o.tut !== 'object') o.tut = { step: 0, off: false, flags: {} };
   if (!o.tut.flags) o.tut.flags = {};
+  if (typeof o.tut.shownAt !== 'number') o.tut.shownAt = o.tick || 0;
   for (const c of o.col) {
     if (!c.prio) c.prio = {};
     for (const w of WORK_TYPES) if (typeof c.prio[w] !== 'number') c.prio[w] = w === 'doctor' ? 2 : 3;
@@ -356,10 +358,11 @@ function countItems(kind) { let n = 0; for (const it of S.m.it) if (it && it.kin
 // 6. Pathfinding (shared buffers; BFS on a 48x32 4-neighbour grid)
 // ============================================================
 const bDist = new Int16Array(N), bPrev = new Int32Array(N), bQ = new Int32Array(N);
+let bStart = -1;
 // mode: 0 colonist, 1 enemy, 2 enemy ghost (through structures)
 function bfsFrom(start, mode, maxDist, goalFn) {
   bDist.fill(-1);
-  bDist[start] = 0; bPrev[start] = -1;
+  bDist[start] = 0; bPrev[start] = -1; bStart = start;
   let h = 0, t = 0;
   bQ[t++] = start;
   while (h < t) {
@@ -397,7 +400,7 @@ function standFor(i, allowOn) {
     const nx = x + DIR4[k][0], ny = y + DIR4[k][1];
     if (!inB(nx, ny)) continue;
     const n = idx(nx, ny);
-    const cst = bDist[n] + (k === 1 || k === 3 ? 1 : 1.3);
+    const cst = bDist[n] + (k === 1 || k === 3 ? 1 : 1.3) + (occ[n] && n !== bStart ? 3 : 0);   // avoid stacking on a busy tile
     if (bDist[n] >= 0 && cst < bd) { bd = cst; best = n; }
   }
   return best < 0 ? null : { stand: best, cost: bd };
@@ -538,6 +541,53 @@ function updateLit() {
       for (let xx = Math.max(0, x - r); xx <= Math.min(W - 1, x + r); xx++)
         if ((xx - x) * (xx - x) + (yy - y) * (yy - y) <= r * r) litMap[yy * W + xx] = 1;
   }
+}
+// occupancy: tiles where a unit stands or a colonist plans to stand (refreshed every tick)
+const occ = new Uint8Array(N);
+function updateOcc() {
+  occ.fill(0);
+  for (const c of S.col) {
+    if (c.dead || c.carriedBy) continue;
+    occ[idx(c.x, c.y)] = 1;
+    const j = c.job;
+    if (j && j.stand >= 0 && j.stand !== undefined) occ[j.stand] = 1;
+  }
+  for (const e of S.en) occ[idx(e.x, e.y)] = 1;
+}
+// a walkable tile next to the colony centre, used as the "home" for reachability checks
+function homeTile() {
+  const cc = colonyCenter();
+  const c0 = idx(cc.x, cc.y);
+  if (passable(c0, false)) return c0;
+  for (const [dx, dy] of DIR4) { const x = cc.x + dx, y = cc.y + dy; if (inB(x, y) && passable(idx(x, y), false)) return idx(x, y); }
+  return -1;
+}
+// colonists (standing) that cannot walk to the colony centre
+let trapped = [];
+function updateTrapped() {
+  const h = homeTile();
+  trapped = [];
+  if (h < 0) return;
+  bfsFrom(h, 0, 0, null);
+  for (const c of S.col) if (!c.dead && !c.downed && !c.carriedBy && bDist[idx(c.x, c.y)] < 0) trapped.push(c);
+}
+// would a blocking object at tile i cut a colonist (currently able to reach home) off from home?
+function wouldTrap(i) {
+  const m = S.m, h = homeTile();
+  if (h < 0 || h === i) return false;
+  const who = S.col.filter(c => !c.dead && !c.carriedBy);
+  bfsFrom(h, 0, 0, null);
+  const before = who.map(c => bDist[idx(c.x, c.y)] >= 0 || idx(c.x, c.y) === i);
+  const saved = m.o[i];
+  m.o[i] = { type: 'wall' };
+  bfsFrom(h, 0, 0, null);
+  m.o[i] = saved;
+  return who.some((c, k) => {
+    if (!before[k]) return false;
+    const ci = idx(c.x, c.y);
+    if (ci === i) { for (const [dx, dy] of DIR4) { const x = c.x + dx, y = c.y + dy; if (inB(x, y) && bDist[idx(x, y)] >= 0) return false; } return true; }
+    return bDist[ci] < 0;
+  });
 }
 const isDark = () => { const p = phase(S.tick); return p >= NIGHT + 0.03 || p < 0.02; };
 
@@ -691,6 +741,7 @@ function findWork(c) {
           if (m.o[i]) continue;                      // a plant still has to be cut first
           const onTile = bpOnTile(b.type);
           if (bpReady(b)) {
+            if ((b.blockedUntil || 0) > S.tick) continue;
             const s = standFor(i, onTile);
             if (s && (!best || s.cost < best.cost)) best = { t: 'work', kind: 'build', tgt: i, stand: s.stand, cost: s.cost, res: [i] };
           } else {
@@ -778,14 +829,13 @@ function findWork(c) {
       return { t: 'cook', item: it, fire, stage: 0, prog: 0, cost: bDist[it], res: [it, fire] };
     },
   };
+  // like RimWorld: lower number first; equal numbers go by Work-tab column order, then distance
   for (let p = 1; p <= 4; p++) {
-    let best = null;
     for (const wt of WORK_TYPES) {
       if (c.prio[wt] !== p) continue;
       const j = scan[wt]();
-      if (j && (!best || j.cost < best.cost)) best = j;
+      if (j) return j;
     }
-    if (best) return best;
   }
   return null;
 }
@@ -834,18 +884,20 @@ function planWander(c) {
   const opts = [];
   for (const [dx, dy] of DIR4) {
     const x = c.x + dx, y = c.y + dy;
-    if (inB(x, y) && passable(idx(x, y), false)) opts.push(idx(x, y));
+    if (inB(x, y) && passable(idx(x, y), false) && !occ[idx(x, y)]) opts.push(idx(x, y));
   }
   return { t: 'wander', until: S.tick + rnd(6, 12), step: opts.length && Math.random() < 0.6 ? pick(opts) : -1, res: [] };
 }
 function assignBeds() {
   const beds = [];
-  for (let i = 0; i < N; i++) { const o = S.m.o[i]; if (o && o.type === 'bed') beds.push(i); }
+  const h = homeTile();
+  if (h >= 0) bfsFrom(h, 0, 0, null);
+  for (let i = 0; i < N; i++) { const o = S.m.o[i]; if (o && o.type === 'bed') { if (h < 0 || bDist[i] >= 0) beds.push(i); else o.owner = -1; } }
   const owners = new Map();
   for (const c of S.col) {
     if (c.dead || c.bed < 0) { c.bed = -1; continue; }
     const o = S.m.o[c.bed];
-    if (!o || o.type !== 'bed' || owners.has(c.bed)) c.bed = -1; else owners.set(c.bed, c.id);
+    if (!o || o.type !== 'bed' || owners.has(c.bed) || !beds.includes(c.bed)) c.bed = -1; else owners.set(c.bed, c.id);
   }
   for (const c of S.col) {
     if (c.dead || c.bed >= 0) continue;
@@ -865,7 +917,7 @@ function releasePatient(c) {
   p.x = p.fx = c.x; p.y = p.fy = c.y; p.st = S.tick; p.sl = 1;
 }
 function healEvery(c) {
-  let base = c.downed ? 40 : c.state === 'sleep' ? 40 : 120;
+  let base = c.downed ? 160 : c.state === 'sleep' ? 40 : 120;
   if (c.inBed >= 0) base /= 2;
   if (c.tendedUntil > S.tick) base /= 2;
   return Math.max(6, Math.round(base));
@@ -1221,6 +1273,13 @@ function runWork(c, j) {
     else if (j.kind !== 'tend') spawnPart('dust', x + 0.5, y + 0.8, 1);
   }
   if (j.prog < need) return;
+  if (j.kind === 'build' && BLOCKING[BUILD[m.bp[i].type].obj] && wouldTrap(i)) {
+    const b = m.bp[i];
+    b.blockedUntil = S.tick + 240; j.prog = 0;
+    if (!b.warned) { b.warned = true; addLog('ไม่สร้าง' + BUILD[b.type].name + 'ช่องนี้ เพราะจะขังคนไว้ในห้อง — วางประตูก่อน', 'warn', 'door_wood'); toast('กำแพงนี้จะขังคนไว้ — ต้องมีประตู'); }
+    endJob(c); c.nextPlan = S.tick + 4;
+    return;
+  }
   switch (j.kind) {
     case 'chop': {
       const o = m.o[i];
@@ -1239,7 +1298,7 @@ function runWork(c, j) {
     case 'sow': m.cr[i] = { kind: 'rice', g: 0 }; break;
     case 'tend':
       patient.tendedUntil = S.tick + Math.floor(DAY * 0.6);
-      patient.hp = Math.min(patient.maxHp, patient.hp + 2);
+      patient.hp = Math.min(patient.maxHp, patient.hp + 1);
       floatText('รักษาแล้ว', patient.x, patient.y, PAL.good);
       break;
     case 'decon': {
@@ -1485,8 +1544,11 @@ function updateEnemy(e) {
   }
   e.state = 'walk';
   if (!e.path.length || S.tick >= e.repathAt) {
-    const goalFn = e.kind === 'boar' ? (i) => manh(ix(i), iy(i), t.x, t.y) === 1 : (i) => cheb(ix(i), iy(i), t.x, t.y) <= 1;
-    let g = bfsFrom(idx(e.x, e.y), 1, 0, goalFn);
+    const near = e.kind === 'boar' ? (i) => manh(ix(i), iy(i), t.x, t.y) === 1 : (i) => cheb(ix(i), iy(i), t.x, t.y) <= 1;
+    const me = idx(e.x, e.y);
+    const goalFn = (i) => near(i) && (!occ[i] || i === me);
+    let g = bfsFrom(me, 1, 0, goalFn);
+    if (g < 0) g = bfsFrom(me, 1, 0, near);
     e.ghost = false;
     if (g < 0) { g = bfsFrom(idx(e.x, e.y), 2, 0, goalFn); e.ghost = true; }
     e.path = pathTo(g) || [];
@@ -1548,9 +1610,13 @@ function raidSize() {
   const pts = wealth() / 250 + S.day * 0.35;
   return clamp(1 + Math.floor(pts / 2.5), 1, Math.min(8, alive().length + 2));
 }
+function wandererWelcome() {
+  const pop = alive().length;
+  return countBuilt('bed', false) >= pop && countAllFood() >= pop * 4 && S.morale >= 50 && pop < 10;
+}
 const raidAllowed = () => S.day >= 4 && S.tick - (S.lastRaid ?? -1e9) >= DAY * 2;
 function rollEvent() {
-  const w = [['raid', raidAllowed() ? 0.35 : 0], ['boar', S.day >= 3 ? 0.14 : 0], ['storm', 0.18], ['gift', 0.17], ['wanderer', alive().length < 10 ? 0.16 : 0]];
+  const w = [['raid', raidAllowed() ? 0.35 : 0], ['boar', S.day >= 3 ? 0.14 : 0], ['storm', 0.18], ['gift', 0.17], ['wanderer', wandererWelcome() ? 0.16 : 0]];
   let tot = 0; for (const [, v] of w) tot += v;
   let r = Math.random() * tot;
   for (const [k, v] of w) { if ((r -= v) < 0) return k; }
@@ -1571,13 +1637,13 @@ function fireEvent(kind) {
       let first = null;
       for (let k = 0; k < n; k++) { const p = edge[(s0 + k) % edge.length]; const e = spawnEnemy('raider', p[0], p[1], raidId); first = first || e; }
       S.raid = true; S.lastRaid = S.tick;
-      letter('โจรบุก!', 'กลุ่มโจร ' + n + ' คนกำลังบุกเข้ามา! แตะชาวอาณานิคมแล้วกด "เกณฑ์" เพื่อสู้ หรือปล่อยให้หลบเข้าห้อง ป้อมปืนจะยิงอัตโนมัติ', 'raid', 'bad', { x: first.x, y: first.y });
+      letter('โจรบุก!', 'กลุ่มโจร ' + n + ' คนกำลังบุกเข้ามา! แตะชาวอาณานิคมแล้วกด "เกณฑ์" เพื่อสู้ หรือปล่อยให้หลบเข้าห้อง ป้อมปืนจะยิงอัตโนมัติ', 'raid', 'bad', { x: first.x, y: first.y, raid: raidId });
       break;
     }
     case 'boar': {
       const p = pick(edgeCells());
-      spawnEnemy('boar', p[0], p[1]);
-      letter('หมูป่าคลั่ง!', 'หมูป่าคลั่งตัวหนึ่งกำลังพุ่งเข้าโจมตีชาวอาณานิคม เกณฑ์คนไปยิงมัน หรือหลบเข้าห้องที่มีประตู', 'boar', 'bad', { x: p[0], y: p[1] });
+      const be = spawnEnemy('boar', p[0], p[1]);
+      letter('หมูป่าคลั่ง!', 'หมูป่าคลั่งตัวหนึ่งกำลังพุ่งเข้าโจมตีชาวอาณานิคม เกณฑ์คนไปยิงมัน หรือหลบเข้าห้องที่มีประตู', 'boar', 'bad', { x: p[0], y: p[1], enemy: be.id });
       break;
     }
     case 'storm': {
@@ -1650,7 +1716,8 @@ function tick() {
   if (S.over) return;
   S.tick++;
   if (S.tick % DAY === 0) { S.day++; addLog('เริ่มวันที่ ' + S.day, 'info', 'day'); }
-  if (S.tick % 30 === 0) { assignBeds(); updateLit(); }
+  updateOcc();
+  if (S.tick % 30 === 0) { assignBeds(); updateLit(); updateTrapped(); }
   if (S.tick % 20 === 0 && S.en.length) updateRooms();
   updateWorld();
   if (S.tick >= S.nextEvent) {
@@ -1745,6 +1812,7 @@ const tmpProj = { x: 0, y: 0, dx: 0, dy: 0 };
 const tmpPart = { kind: '', x: 0, y: 0, life: 0, maxLife: 0 };
 const objOpts = { variant: 0, dir: 2 };
 const lights = [];
+const labelSpots = [];
 let maxOver = 1;
 
 function bpProgress(b) {
@@ -1808,9 +1876,12 @@ function render(now, dt) {
   }
   for (const e of S.en) { lerpPos(e, rt, tmpPos); e._px = tmpPos.x; e._py = tmpPos.y; rowBuckets[clamp(Math.round(tmpPos.y), 0, H - 1)].push(e); }
 
-  const drawObjRow = (y) => {
+  // tall = sprite overflows far above its tile (trees): it must cover a unit standing just north of it
+  const tall = (i) => { const o = m.o[i]; return !!(o && !m.mt[i] && overflowOf(o.type, 0.2) > 0.4); };
+  const drawObjRow = (y, wantTall) => {
     for (let x = x0; x <= x1; x++) {
       const i = y * W + x;
+      if (tall(i) !== wantTall) continue;
       if (m.mt[i]) { art('drawMountain', ctx, px(x), py(y), T, maskOf(i, isMtn), m.gv[i]); continue; }
       const o = m.o[i];
       if (o) {
@@ -1843,12 +1914,14 @@ function render(now, dt) {
     const dz = m.d[y * W + x];
     if (dz) art('drawDesignation', ctx, dz, px(x), py(y), T);
   }
-  // Objects are drawn one row ahead of units, so a unit working just north of a
-  // mountain/wall/tree is drawn over that object's raised cap instead of hidden by it.
+  // Interleave by foot position: low objects (rock, mountain cap, wall, bed...) of the NEXT row are
+  // drawn before the units of this row, so their raised top edge never hides a worker's legs; tall
+  // objects (tree canopies) of the next row are drawn after, so they correctly cover a unit behind them.
   const yStart = Math.max(0, y0 - 1);
-  drawObjRow(yStart);
+  drawObjRow(yStart, false);
   for (let y = yStart; y <= y1o; y++) {
-    if (y + 1 <= y1o) drawObjRow(y + 1);
+    drawObjRow(y, true);
+    if (y + 1 <= y1o) drawObjRow(y + 1, false);
     drawUnitRow(y);
   }
   // projectiles
@@ -1890,11 +1963,17 @@ function render(now, dt) {
   art('drawSky', ctx, view.w, view.h, phase(rt), S.weather, now, lights);
   // text layer
   const fs = clamp(Math.round(T * 0.3), 10, 14);
+  labelSpots.length = 0;
   for (const c of S.col) {
     if (c.dead || c.carriedBy) continue;
     const ux = ox + c._px * T, uy = oy + c._py * T;
     if (ux < -T || ux > view.w + T || uy < -T || uy > view.h + T) continue;
-    if (T >= 24) drawLabel(c.name, ux + T / 2, uy + T + fs * 0.4, c.drafted ? PAL.draft : (sel.kind === 'col' && sel.id === c.id ? PAL.select : PAL.text), fs);
+    if (T >= 24) {
+      let ly = uy + T + fs * 0.4;
+      for (let k = 0; k < 4 && labelSpots.some(p => Math.abs(p.x - ux) < T * 0.9 && Math.abs(p.y - ly) < fs); k++) ly += fs + 1;
+      labelSpots.push({ x: ux, y: ly });
+      drawLabel(c.name, ux + T / 2, ly, c.drafted ? PAL.draft : (sel.kind === 'col' && sel.id === c.id ? PAL.select : PAL.text), fs);
+    }
     if (c.downed) drawLabel(c.inBed >= 0 ? 'พักฟื้น' : 'หมดสติ', ux + T / 2, uy - fs * 0.6, PAL.bad, fs);
     if (c.hp < c.maxHp) drawBar(ux + T * 0.15, uy - 3, T * 0.7, c.hp / c.maxHp, c.hp / c.maxHp < 0.35 ? PAL.bad : PAL.good);
     if (c.job && c.job.t === 'work' && c.state === 'work') {
@@ -1978,8 +2057,10 @@ function buildTiles(type, r) {
 // blueprints may go on empty ground or on plants (the plant is then marked for cutting)
 function canPlace(type, i) {
   const m = S.m;
-  if (m.mt[i] || m.bp[i]) return false;
-  if (m.o[i] && !isPlant(m.o[i])) return false;
+  if (m.mt[i]) return false;
+  const doorOnWall = type === 'door_wood' && ((m.o[i] && m.o[i].type === 'wall') || (m.bp[i] && m.bp[i].type.startsWith('wall')));
+  if (m.bp[i] && !doorOnWall) return false;
+  if (m.o[i] && !isPlant(m.o[i]) && !doorOnWall) return false;
   if (S.en.some(e => idx(e.x, e.y) === i)) return false;
   return true;
 }
@@ -1989,21 +2070,45 @@ function eraseTile(i) {
   if (m.bp[i]) { const b = m.bp[i]; m.bp[i] = null; for (const k in b.have) placeItem(k, b.have[k], i); n++; if (m.d[i] === 'chop') m.d[i] = null; }
   else if (m.d[i]) { m.d[i] = null; n++; }
   else if (m.o[i] && PLAYER_BUILT[m.o[i].type]) { m.d[i] = 'deconstruct'; n++; }
-  if (m.z[i]) { m.z[i] = 0; n++; }
+  if (m.z[i]) { setZone(i, 0); n++; }
   return n;
+}
+// changing a zone: unharvestable crops of a removed grow zone are cleared (ripe ones stay to be harvested)
+function setZone(i, z) {
+  const m = S.m;
+  if (m.z[i] === 1 && z !== 1 && m.cr[i] && m.cr[i].g < 1) m.cr[i] = null;
+  m.z[i] = z;
+}
+function placeBlueprint(type, i) {
+  const m = S.m;
+  if (m.bp[i]) { const old = m.bp[i]; for (const k in old.have) placeItem(k, old.have[k], i); }   // door replaces a wall blueprint
+  m.bp[i] = { type, have: {}, prog: 0 };
+  if (isPlant(m.o[i])) m.d[i] = 'chop';
+  else if (m.o[i] && m.o[i].type === 'wall') m.d[i] = 'deconstruct';   // door on a built wall: wall comes down first
+  else m.d[i] = null;
 }
 function applyTool(tool, r) {
   const m = S.m;
   const grp = toolGroup(tool);
   let n = 0;
   if (BUILD[tool]) {
-    for (const i of buildTiles(tool, r)) {
+    const tiles = buildTiles(tool, r);
+    for (const i of tiles) {
       if (!canPlace(tool, i)) continue;
-      m.bp[i] = { type: tool, have: {}, prog: 0 };
-      m.d[i] = isPlant(m.o[i]) ? 'chop' : null;
+      placeBlueprint(tool, i);
       n++;
     }
     if (!n) toast('วางตรงนี้ไม่ได้');
+    // a dragged wall ring without any door gets one door blueprint automatically (side nearest the camp)
+    if (n && BUILD[tool].drag && r.x1 - r.x0 >= 2 && r.y1 - r.y0 >= 2) {
+      const ring = tiles.filter(i => isWallishBp(i));
+      if (!ring.some(i => (m.o[i] && m.o[i].type === 'door') || (m.bp[i] && m.bp[i].type === 'door_wood'))) {
+        const cc = colonyCenter();
+        const cand = ring.filter(i => { const x = ix(i), y = iy(i); const corner = (x === r.x0 || x === r.x1) && (y === r.y0 || y === r.y1); return !corner && canPlace('door_wood', i); })
+          .sort((a, b) => manh(ix(a), iy(a), cc.x, cc.y) - manh(ix(b), iy(b), cc.x, cc.y));
+        if (cand.length) { placeBlueprint('door_wood', cand[0]); toast('วางประตูให้อัตโนมัติ 1 ช่อง'); }
+      }
+    }
   } else {
     for (const i of rectTiles(r)) {
       const o = m.o[i];
@@ -2017,9 +2122,9 @@ function applyTool(tool, r) {
           if (m.bp[i]) { const b = m.bp[i]; m.bp[i] = null; for (const k in b.have) placeItem(k, b.have[k], i); n++; }
           break;
         case 'erase': n += eraseTile(i); break;
-        case 'zone_grow': if (!m.mt[i] && !(o && BLOCKING[o.type])) { m.z[i] = 1; n++; } break;
-        case 'zone_stockpile': if (!m.mt[i] && !(o && BLOCKING[o.type])) { m.z[i] = 2; n++; } break;
-        case 'zone_remove': if (m.z[i]) { m.z[i] = 0; n++; } break;
+        case 'zone_grow': if (!m.mt[i] && !(o && BLOCKING[o.type])) { setZone(i, 1); n++; } break;
+        case 'zone_stockpile': if (!m.mt[i] && !(o && BLOCKING[o.type])) { setZone(i, 2); n++; } break;
+        case 'zone_remove': if (m.z[i]) { setZone(i, 0); n++; } break;
       }
     }
     if (n && (tool === 'chop' || tool === 'mine')) S.tut.flags.desig = true;
@@ -2087,6 +2192,14 @@ function onLongPress(sx, sy) {
   return true;
 }
 function orderMove(c, i) {
+  // don't stack on another unit: take the nearest free walkable tile instead
+  const taken = (t) => S.col.some(q => q !== c && !q.dead && !q.carriedBy && (idx(q.x, q.y) === t || q.moveTo === t)) || S.en.some(e => idx(e.x, e.y) === t);
+  if (taken(i)) {
+    bfsFrom(i, 0, 6, null);
+    let best = -1;
+    for (let k = 0; k < N; k++) if (bDist[k] >= 0 && !taken(k) && (best < 0 || bDist[k] < bDist[best])) best = k;
+    if (best >= 0) i = best;
+  }
   c.target = null; c.moveTo = i; c.mpath = null;
   spawnPart('dust', ix(i) + 0.5, iy(i) + 0.7, 3);
   ui.dirty = true;
@@ -2321,6 +2434,9 @@ function computeAlerts() {
   if (food < pop.length * 2) out.push({ kind: food <= 0 ? 'bad' : 'warn', icon: 'food', text: food <= 0 ? 'ไม่มีอาหาร!' : 'อาหารเหลือน้อย' });
   const starving = pop.filter(c => c.food <= 0);
   if (starving.length) out.push({ kind: 'bad', icon: 'food', text: 'อดอาหาร: ' + starving.map(c => c.name).join(', '), focus: starving[0] });
+  if (trapped.length) out.unshift({ kind: 'bad', icon: 'alert', text: 'ติดอยู่ในห้อง: ' + trapped.map(c => c.name).join(', '), focus: trapped[0] });
+  const held = S.m.bp.findIndex(b => b && (b.blockedUntil || 0) > S.tick);
+  if (held >= 0) out.push({ kind: 'warn', icon: 'door_wood', text: 'กำแพงจะขังคน — วางประตู', focus: { x: ix(held), y: iy(held) } });
   const bedless = pop.filter(c => c.bed < 0).length;
   if (bedless) out.push({ kind: 'warn', icon: 'bed', text: 'ไม่มีเตียง ' + bedless + ' คน' });
   if (!S.m.z.includes(2)) out.push({ kind: 'warn', icon: 'zone_stockpile', text: 'ยังไม่มีคลังเก็บ' });
@@ -2494,9 +2610,9 @@ const TUT = [
   { text: 'ทำพื้นที่ปลูกข้าว: แท็บ "โซน" → พื้นที่ปลูก แล้วลากกรอบบนดิน', done: () => S.m.z.includes(1) },
   { text: 'ขยายคลังเก็บ: แท็บ "โซน" → คลังเก็บ ลากกรอบ ชาวอาณานิคมจะขนของมาเก็บ', done: () => S.m.z.filter(z => z === 2).length > 15 },
   { text: 'หาวัสดุ: แท็บ "คำสั่ง" → ตัดไม้ หรือ ขุด แล้วลากกรอบบนต้นไม้/ภูเขา', done: () => !!S.tut.flags.desig },
-  { text: 'สร้างห้อง: "สถาปนิก" → กำแพง ลากกรอบเป็นห้อง แล้ววางประตูไม้ 1 ช่องบนกำแพง (ห้องช่วยหลบภัยได้)', done: () => countBuilt('door', true) > 0 },
+  { text: 'สร้างห้อง: "สถาปนิก" → กำแพง ลากกรอบเป็นห้อง (ระบบจะเว้นประตูให้ 1 ช่อง หรือวาง "ประตูไม้" ทับกำแพงเองได้)', done: () => countBuilt('door', true) > 0 },
   { text: 'ป้องกันโจร: "สถาปนิก" → ป้อมปืน วางใกล้ฐาน (โจรจะมาตั้งแต่วันที่ 4)', done: () => countBuilt('turret', true) > 0 },
-  { text: 'เมื่อมีศัตรู: แตะชาวอาณานิคม → "เกณฑ์" แล้วแตะพื้นว่าง (หรือกดค้าง) เพื่อสั่งเดิน', done: () => !!S.tut.flags.draft },
+  { text: 'ศัตรูมาแล้ว! แตะชาวอาณานิคม → "เกณฑ์" แล้วแตะพื้นว่าง (หรือกดค้าง) เพื่อสั่งเดิน · แตะศัตรูเพื่อยิง', done: () => !!S.tut.flags.draft, when: () => S.en.length > 0 },
 ];
 function countBuilt(type, withBp) {
   let n = 0;
@@ -2511,7 +2627,12 @@ function renderTutorial() {
   if (!el.tut) return;
   const t = S.tut;
   while (t.step < TUT.length && TUT[t.step].done()) t.step++;
-  const show = !t.off && t.step < TUT.length && !ui.tool;
+  // a tip hides itself after about one game day; the draft tip waits for the first enemy
+  if (t.step < TUT.length && t.shownStep === t.step && S.tick - (t.shownAt || 0) > DAY) { t.step++; }
+  const cur = TUT[t.step];
+  const ready = !!cur && (!cur.when || cur.when());
+  if (ready && t.shownStep !== t.step) { t.shownStep = t.step; t.shownAt = S.tick; }
+  const show = !t.off && ready && !ui.tool;
   el.tut.classList.toggle('is-visible', show);
   if (show) setText(el.tut.querySelector('.tutorial-text'), 'คำแนะนำ ' + (t.step + 1) + '/' + TUT.length + ': ' + TUT[t.step].text);
 }
@@ -2580,9 +2701,21 @@ $('letter-ok').addEventListener('click', () => {
   if (S.over) { restart(); return; }
   closeLetter();
 });
-if (el.lGo) el.lGo.addEventListener('click', () => { const f = ui.letterFocus; if (f) centerOn(f.x, f.y); if (!S.over) closeLetter(); });
+function liveFocus(f) {
+  if (!f) return null;
+  if (f.raid) {
+    const rs = S.en.filter(e => e.raidId === f.raid && e.hp > 0);
+    if (rs.length) return { x: Math.round(rs.reduce((a, e) => a + e.x, 0) / rs.length), y: Math.round(rs.reduce((a, e) => a + e.y, 0) / rs.length) };
+  }
+  if (f.enemy) { const e = S.en.find(e => e.id === f.enemy); if (e) return { x: e.x, y: e.y }; }
+  return f;
+}
+if (el.lGo) el.lGo.addEventListener('click', () => { const f = liveFocus(ui.letterFocus); if (f) centerOn(f.x, f.y); if (!S.over) closeLetter(); });
 if (el.hint) el.hint.querySelector('.btn').addEventListener('click', () => { ui.tool = null; ui.dirty = true; });
-if (el.tut) el.tut.querySelector('.btn').addEventListener('click', () => { S.tut.step++; ui.dirty = true; });
+if (el.tut) {
+  el.tut.querySelector('#tut-next').addEventListener('click', () => { S.tut.step++; ui.dirty = true; });
+  el.tut.querySelector('#tut-off').addEventListener('click', () => { S.tut.off = true; toast('ปิดคำแนะนำแล้ว (เปิดใหม่ได้ที่เมนู)'); ui.dirty = true; });
+}
 {
   const tb = $('btn-tut');
   if (tb) tb.addEventListener('click', () => { S.tut.off = !S.tut.off; if (!S.tut.off && S.tut.step >= TUT.length) S.tut.step = 0; toast(S.tut.off ? 'ปิดคำแนะนำแล้ว' : 'เปิดคำแนะนำแล้ว'); closeTabs(); ui.dirty = true; });
@@ -2713,7 +2846,7 @@ window.__colony = {
   spawn(kind, x, y) { return spawnEnemy(kind, x, y).id; },
   roomAt(x, y) { updateRooms(); return roomId[idx(x, y)]; },
   saveText() { return JSON.stringify(S, (k, v) => (k[0] === '_' || k === 'vis') ? undefined : v); },
-  wealth, raidSize, stats, placeItem, get haulBlock() { return haulBlock.size; }, get floats() { return FX.floats.length; }, floatText,
+  wealth, raidSize, stats, placeItem, wandererWelcome, wouldTrap, get trapped() { return trapped.map(c => c.name); }, liveFocus, get letterFocus() { return ui.letterFocus; }, updateTrapped, get haulBlock() { return haulBlock.size; }, get floats() { return FX.floats.length; }, floatText,
   workSpeed(id) { const c = S.col.find(c => c.id === id); return c ? workSpeed(c) : 0; }, lit(x, y) { updateLit(); return litMap[idx(x, y)]; },
 };
 

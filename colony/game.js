@@ -737,7 +737,10 @@ function findWork(c) {
       let best = null;
       for (let i = 0; i < N; i++) {
         const b = m.bp[i];
-        if (b && !res.has(i)) {
+        if (m.d[i] === 'deconstruct' && m.o[i] && !res.has(i)) {   // incl. a wall that makes way for a door
+          const s = standFor(i, false);
+          if (s && (!best || s.cost < best.cost)) best = { t: 'work', kind: 'decon', tgt: i, stand: s.stand, cost: s.cost, res: [i] };
+        } else if (b && !res.has(i)) {
           if (m.o[i]) continue;                      // a plant still has to be cut first
           const onTile = bpOnTile(b.type);
           if (bpReady(b)) {
@@ -757,9 +760,6 @@ function findWork(c) {
               if (!best || cst < best.cost) best = { t: 'supply', kind: k, item: it, bp: i, amt: Math.min(need, CARRY), stage: 0, cost: cst, res: [it] };
             }
           }
-        } else if (m.d[i] === 'deconstruct' && m.o[i] && !res.has(i)) {
-          const s = standFor(i, false);
-          if (s && (!best || s.cost < best.cost)) best = { t: 'work', kind: 'decon', tgt: i, stand: s.stand, cost: s.cost, res: [i] };
         }
       }
       return best;
@@ -1822,7 +1822,7 @@ function bpProgress(b) {
   return clamp(0.5 * (have / need) + 0.5 * ((b.prog || 0) / BUILD[b.type].work), 0, 1);
 }
 function colonistView(u) {
-  const v = u._v || (u._v = { state: 'idle', dir: 1, look: 0, carrying: null, selected: false, drafted: false, name: '', trait: '', hp: 0, maxHp: 0, work: null, aim: 'S', carryPawn: null });
+  const v = u._v || (u._v = { state: 'idle', dir: 1, look: 0, carrying: null, selected: false, drafted: false, name: '', trait: '', hp: 0, maxHp: 0, work: null, aim: 'S', carryPawn: null, inBed: false, bedDir: 2 });
   v.state = u.dead ? 'dead' : u.downed ? 'downed' : u.state;
   v.dir = u.dir; v.look = u.look;
   v.carrying = u.carry ? u.carry.kind : null;
@@ -1832,6 +1832,10 @@ function colonistView(u) {
   v.aim = u.aim || 'S';
   const p = u.carryPawn ? S.col.find(q => q.id === u.carryPawn) : null;
   v.carryPawn = p ? p.look : null;
+  // lying on a bed tile (sleeping in it, a patient, or dead in it): art draws the pawn in the bed
+  const bo = S.m.o[idx(u.x, u.y)];
+  v.inBed = !!(bo && bo.type === 'bed' && !moving(u) && (v.state === 'sleep' || v.state === 'downed' || v.state === 'dead'));
+  v.bedDir = v.inBed ? (typeof bo.dir === 'number' ? bo.dir : 2) : 2;
   return v;
 }
 
